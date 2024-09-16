@@ -1,1 +1,0 @@
-# Heuristic-Problem-Solving
