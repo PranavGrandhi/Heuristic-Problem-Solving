@@ -1,4 +1,4 @@
-# Heuristic-Problem-Solving
+# Card-Nim
 
 You and your opponent are presented with some number of stones s that I will announce the day of the competition. The winner removes the last stone(s). Each player has a set of cards with numbers 1 through k (another number that I will provide but whose sum exceeds s). The number s won't exceed 500 and k of 200. So, if s = 100 cards and k = 25, then each player will have one 1, one 2, ... one 25. The first player chooses a card and removes exactly that number of stones. The card then disappears from the first player's hand. Similarly for the second player.
 
