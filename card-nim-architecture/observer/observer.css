@@ -1,0 +1,241 @@
+html {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background-color: #F4EEE1;
+    color: #000000;
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 10%;
+    bottom: 10%;
+    padding: 10px;
+    font-family: "Helvetica", sans-serif;
+    align-items: center; /* Vertically center the content */
+}
+
+.game-container {
+    /* display: flex; */
+    /* display: block; Optional, to make the container fit its content */
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100vh; /* Adjust the height as needed */
+    align-items: center; /* Vertically center the content */
+}
+
+#opponent-container {
+    display: flex;
+    justify-content: flex-end; /* Align cards to the right */
+    position: relative; /* So that the pickaxe can be positioned absolutely */
+}
+
+#stone-container {
+    font-size: 50px;
+    /* flex-direction: column; Stack elements vertically */
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    display: flex;
+    margin: 0 auto;
+    text-align: center;
+    /* line-height: 90%; */
+}
+
+#player-container {
+    display: flex;
+    justify-content: flex-end; /* Align cards to the right */
+    position: relative; /* So that the pickaxe can be positioned absolutely */
+}
+
+#game-message {
+    font-size: 30px;
+    display: table;
+    margin: 0 auto;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.stone_image {
+    margin: 40px 0;
+    position: relative;
+    /* display: inline-block; Optional, to make the container fit its content */
+    height: 120px;
+    width: 120px;
+
+}
+
+.stone-count {
+    /* display: inline-block; Optional, to make the container fit its content */
+    font-weight: bold; /* Optional: Add bold styling to the count */
+    font-size: 30px; /* Adjust the font size as needed */
+    letter-spacing: 1px;
+    padding: 5px;
+    margin-top: 5px; /* Adjust the margin as needed */
+    margin-left: 10px; /* Adjust the spacing between the image and count */
+}
+
+.verbose-container {
+    display: flex;
+    flex-direction: column;
+    margin: 0 100;
+    padding: 0 0;
+    line-height: 1; /* Adjust the line-height to reduce spacing */
+    display: block;
+    text-align: left;
+}
+
+.player1-card {
+    background-color: #add8e6;
+}
+
+.player2-card {
+    background-color: #f69396;
+}
+
+.player-card {
+    position: relative;
+    margin: 5px;
+    border-radius: 5px;
+    border-color: #000000;
+    width: 100px;
+    height: 150px;
+    margin-right: -35px;
+    margin-left: -35px;
+    transition-duration: .2s;
+}
+
+.opponent-card {
+    position: relative;
+    margin: 5px;
+    border-radius: 5px;
+    border-color: #000000;
+    width: 100px;
+    height: 150px;
+    margin-right: -35px;
+    margin-left: -35px;
+    transition-duration: .2s;
+}
+
+.clickable-card:hover {
+    box-shadow: 5px 5px 0px rgb(0 0 0 / 0.2);
+    transform: rotate(10deg) translate(0px, -20px);
+}
+
+.pickaxe {
+    max-width: 75px; width: 100%; height: auto;
+    margin-right: 50px;
+}
+
+.pickaxe-hide {
+    display: none;
+}
+
+.playing-card {
+    width: 100px;
+    height: 150px;
+    margin-right: -35px;
+    margin-left: -35px;
+    transition-duration: .2s;
+}
+
+.player-top-left-value {
+    font-size: 16px;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-weight: bold;
+}
+
+.player-bottom-right-value {
+    font-size: 16px;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-weight: bold;
+}
+
+.player-center-value {
+    font-size: 30px;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.opponent-top-left-value {
+    font-size: 12px;
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    font-weight: bold;
+}
+
+.opponent-bottom-right-value {
+    font-size: 12px;
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    font-weight: bold;
+}
+
+.opponent-center-value {
+    font-size: 24px;
+    font-style: italic;
+    font-weight: bold;
+}
+
+
+#stone-and-played-container {
+    display: flex;
+    justify-content: flex-end; /* Align cards to the right */
+    position: relative; /* So that the pickaxe can be positioned absolutely */
+}
+
+#stone-container {
+    display: flex;
+    justify-content: flex-end; /* Align cards to the right */
+    position: relative; /* So that the pickaxe can be positioned absolutely */
+}
+/* Container for played cards */
+#played-cards-container {
+    display: flex;
+    justify-content: flex-end; /* Align cards to the right */
+    position: relative; /* So that the pickaxe can be positioned absolutely */
+}
+
+/* Styling for played cards */
+.played-card {
+    position: relative;
+    margin: 5px;
+    border-radius: 5px;
+    border-color: #000000;
+    width: 100px;
+    height: 150px;
+    margin-right: -35px;
+    margin-left: -35px;
+    transition-duration: .2s;
+    /* Additional styling if needed */
+}
+
+/* Optional: Different styling for player and opponent cards */
+.player1-card {
+    background-color: #add8e6;
+}
+
+.player2-card {
+    background-color: #f69396;
+}
+
+.text-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: right;
+    padding: 10px;
+    margin-bottom: 40px; /* Ensure margin between the top text and content */
+}
+
+.content {
+    padding-top: 60px; /* Adjust this value to add space between content and top text */
+}
