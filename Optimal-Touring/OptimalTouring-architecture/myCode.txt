@@ -1,0 +1,12 @@
+1
+move
+1440
+delay
+2
+move
+1440
+delay
+3
+move
+1440
+delay
