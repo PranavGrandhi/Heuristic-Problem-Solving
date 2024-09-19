@@ -1,4 +1,4 @@
-The file of sites' data should be named as “sites.txt”. Do not change OptimalTouring.py or helper.py. If you find any bugs, you could contact me with zy2262@nyu.edu.
+The file of sites' data should be named as “sites.txt”. Do not change OptimalTouring.py or helper.py. If you find any bugs, you could contact me with pvg2018@nyu.edu or vb1467@nyu.edu
 
 If you want to play it by hand, just run OptimalTouring.py and follow the instructions
 
