@@ -10,7 +10,7 @@ If you want to play it by program, you should follow example.py to build your pr
 	4. sendMove(delayTime=x) means you stay/visit the current site for x minutes
 	5. settlement() will terminate this game and print out the result
 	6. getRevenue(), getSites(), getTime(), getLocation(), getDay(), getState() will give you the information
-	7. printLayout() could print the map, but when the map is large, it will be slow.
+	7. After the game is done, you can call printPath() which will print the reward and the path
 
 If you don't want to use python:
 	1. Your program should be able to read the site by yourself.
