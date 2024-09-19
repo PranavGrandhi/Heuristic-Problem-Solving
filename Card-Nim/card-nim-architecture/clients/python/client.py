@@ -2,6 +2,10 @@ import sys
 from functools import lru_cache
 import socket
 import time
+import math
+
+class TimeoutException(Exception):
+    pass
 
 class TimeoutException(Exception):
     pass
@@ -38,19 +42,31 @@ class Client():
 
     def whatCardToWin(self, myCards, oppCards, stones, time_limit=10):
         # Estimate cache size to be close to 100GB
+<<<<<<< HEAD
         # Assuming each cache entry takes about 2 KB 
         cache_size = 100_000_000 // 2
+=======
+        # Assuming each cache entry takes about 1 KB 
+        cache_size = 100_000_000
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
 
         start_time = time.time()
 
         @lru_cache(maxsize=cache_size)
         def memoized_search(memoMyCards, memoOppCards, stones):
+<<<<<<< HEAD
             # print(f"searching myCards: {memoMyCards}, oppCards: {memoOppCards}, stones: {stones}")
+=======
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
             if time.time() - start_time > time_limit:
                 raise TimeoutException("Time limit exceeded")
 
             filteredOppCards = tuple(c for c in memoOppCards if c <= stones)
+<<<<<<< HEAD
             filteredMyCards = tuple(c for c in memoMyCards if c <= stones)
+=======
+            filteredMyCards = tuple(c for c in memoMyCards if c <= stones and (stones - c) not in memoOppCards)
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
 
             if len(filteredOppCards) == 0:
                 return True, min(memoMyCards), "all opp cards are greater than stones"
@@ -58,6 +74,7 @@ class Client():
                 return False, min(memoMyCards), "all my cards are greater than stones"
             if stones in filteredMyCards:
                 return True, stones, "found exact card"
+<<<<<<< HEAD
 
             cards_to_iterate  = filteredMyCards
             if (len(filteredMyCards) * 2 < stones) and ((2 ** len(filteredMyCards)) * (2 ** len(filteredOppCards)) * stones > 10_000_000):
@@ -86,11 +103,39 @@ class Client():
             lastDitchResult = self.lastDitchEffort(memoMyCards, memoOppCards, stones)
             # print(f"Got last ditch result {lastDitchResult}")
             # print("***************************************************************************************************************************************")
+=======
+            for card in filteredMyCards:
+                if (stones-card) < min(memoOppCards):
+                    return True, card, "opponent doesn't have lower card"
+
+            cards_to_iterate  = filteredMyCards
+            if ((2 ** len(filteredMyCards)) * (2 ** len(filteredOppCards)) * stones > 10_000_000):
+                # truncated_len = max(3, (10 - (stones // len(filteredMyCards))))
+                truncated_len = min(int(0.5*math.log2(10e7/stones)), len(filteredMyCards))
+                cards_to_iterate = filteredMyCards[:truncated_len]
+
+            for card in cards_to_iterate:
+                myNewCards = tuple(c for c in memoMyCards if c != card)
+                try:
+                    oppResult = memoized_search(memoOppCards, myNewCards, stones - card)
+                    if oppResult[0] == False:
+                        return True, card, "found a losing condition for opponent", f"oppResult: {oppResult}"
+                except TimeoutException:
+                    print("TIMEOUT EXCEPTION")
+                    cards_leftover = [c for c in cards_to_iterate if c <= card]
+                    return self.lastDitchEffort(cards_leftover, memoOppCards, stones)
+
+            lastDitchResult = self.lastDitchEffort(memoMyCards, memoOppCards, stones)
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
             return lastDitchResult
 
         try:
             # Set the recursion limit to a high value to avoid hitting it
+<<<<<<< HEAD
             sys.setrecursionlimit(100000)
+=======
+            sys.setrecursionlimit(1_000_000)
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
             result = memoized_search(myCards, oppCards, stones)
             return result
         except (TimeoutException, RecursionError) as e:
@@ -132,6 +177,7 @@ class Client():
         '''
         move = self.whatCardToWin(self.my_cards, self.opp_cards, self.num_stones)
         print(f"move: {move}, stones: {self.num_stones}")
+<<<<<<< HEAD
         # if move == None:
         #     # Making a last ditch effort to choose a good card
         #     for card in myCards:
@@ -146,6 +192,8 @@ class Client():
         # if move == None:
         #     move = False, max(self.my_cards)
 
+=======
+>>>>>>> 5e6cb28f6c6a00a5416ab8c23981344974faab9d
         return move[1]
 
 
