@@ -9,7 +9,16 @@ i = -1
 stack = []
 while i < len(lines)-1:
     i += 1
-    line = lines[i][:-1]
+    line = lines[i].strip()  # Remove leading/trailing whitespace
+
+    # Skip empty lines
+    if not line:
+        continue
+
+    # Skip comment lines
+    if line.startswith('#'):
+        continue
+
     # For debug use
     # if print, print the stack, and press enter to continue
     if "print" in line:
@@ -44,6 +53,7 @@ while i < len(lines)-1:
             stack = stack[:-3]
         else:
             stack = stack[:-2]
+        continue  # Add continue here to avoid processing further
 
     # if +, pop and add the top 2 value in stack and push back to stack
     if "+" in line:
@@ -51,7 +61,7 @@ while i < len(lines)-1:
         stack = stack[:-1]
         continue
 
-    # if -, pop and do "top value - sencond top value in stack", and push the result back to stack
+    # if -, pop and do "top value - second top value in stack", and push the result back to stack
     if "-" in line:
         stack[-2] = stack[-1] - stack[-2]
         stack = stack[:-1]
@@ -124,6 +134,6 @@ while i < len(lines)-1:
         stack.append(x.getMaxSitesNo())
         continue
 
-
 x.settlement()
+x.printPath()
 input()

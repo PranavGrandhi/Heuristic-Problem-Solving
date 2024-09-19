@@ -1,0 +1,131 @@
+# Day 1 - Start at 9 AM
+540
+delay
+# Visit Site 25
+25
+move
+# Spend desired time at Site 25
+# Delay for desiredtime of Site 25
+25
+getCost
+delay
+# Move to Site 70
+70
+move
+70
+getCost
+delay
+# Move to Site 64
+64
+move
+64
+getCost
+delay
+# Day 2 - Start at midnight, delay until 10 AM
+900
+delay
+# Visit Site 22
+22
+move
+22
+getCost
+delay
+# Move to Site 76
+76
+move
+76
+getCost
+delay
+# Move to Site 68
+68
+move
+68
+getCost
+delay
+# Move to Site 80
+80
+move
+80
+getCost
+delay
+# Day 3 - Start at midnight, delay until 9 AM
+540
+delay
+# Visit Site 95
+95
+move
+95
+getCost
+delay
+# Move to Site 60
+60
+move
+60
+getCost
+delay
+# Move to Site 87
+87
+move
+87
+getCost
+delay
+# Move to Site 28
+28
+move
+28
+getCost
+delay
+# Day 4 - Start at midnight, delay until 11 AM
+660
+delay
+# Visit Site 33
+33
+move
+33
+getCost
+delay
+# Move to Site 65
+65
+move
+65
+getCost
+delay
+# Move to Site 54
+54
+move
+54
+getCost
+delay
+# Move to Site 32
+32
+move
+32
+getCost
+delay
+# Day 5 - Start at midnight, delay until 10 AM
+600
+delay
+# Visit Site 13
+13
+move
+13
+getCost
+delay
+# Move to Site 36
+36
+move
+36
+getCost
+delay
+# Move to Site 82
+82
+move
+82
+getCost
+delay
+# Move to Site 44
+44
+move
+44
+getCost
+delay

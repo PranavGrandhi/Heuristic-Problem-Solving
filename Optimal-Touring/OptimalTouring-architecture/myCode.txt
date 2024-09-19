@@ -1,12 +1,129 @@
-1
-move
-1440
+# Day 1 - Start at 9 AM
+540
 delay
-2
+# Visit Site 25
+25
 move
-1440
+# Spend desired time at Site 25 (158 minutes)
+158
 delay
-3
+# Move to Site 70
+70
 move
-1440
+# Spend desired time at Site 70 (183 minutes)
+183
+delay
+# Move to Site 64
+64
+move
+# Spend desired time at Site 64 (141 minutes)
+141
+delay
+# Day 2 - Start at midnight, delay until 10 AM
+900
+delay
+# Visit Site 22
+22
+move
+# Spend desired time at Site 22 (225 minutes)
+225
+delay
+# Move to Site 76
+76
+move
+# Spend desired time at Site 76 (129 minutes)
+129
+delay
+# Move to Site 68
+68
+move
+# Spend desired time at Site 68 (175 minutes)
+175
+delay
+# Move to Site 80
+80
+move
+# Spend desired time at Site 80 (228 minutes)
+228
+delay
+# Day 3 - Start at midnight, delay until 9 AM
+540
+delay
+# Visit Site 95
+95
+move
+# Spend desired time at Site 95 (216 minutes)
+216
+delay
+# Move to Site 60
+60
+move
+# Spend desired time at Site 60 (229 minutes)
+229
+delay
+# Move to Site 87
+87
+move
+# Spend desired time at Site 87 (166 minutes)
+166
+delay
+# Move to Site 28
+28
+move
+# Spend desired time at Site 28 (167 minutes)
+167
+delay
+# Day 4 - Start at midnight, delay until 11 AM
+660
+delay
+# Visit Site 33
+33
+move
+# Spend desired time at Site 33 (218 minutes)
+218
+delay
+# Move to Site 65
+65
+move
+# Spend desired time at Site 65 (165 minutes)
+165
+delay
+# Move to Site 54
+54
+move
+# Spend desired time at Site 54 (196 minutes)
+196
+delay
+# Move to Site 32
+32
+move
+# Spend desired time at Site 32 (222 minutes)
+222
+delay
+# Day 5 - Start at midnight, delay until 10 AM
+600
+delay
+# Visit Site 13
+13
+move
+# Spend desired time at Site 13 (199 minutes)
+199
+delay
+# Move to Site 36
+36
+move
+# Spend desired time at Site 36 (222 minutes)
+222
+delay
+# Move to Site 82
+82
+move
+# Spend desired time at Site 82 (202 minutes)
+202
+delay
+# Move to Site 44
+44
+move
+# Spend desired time at Site 44 (228 minutes)
+228
 delay

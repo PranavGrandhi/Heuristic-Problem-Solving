@@ -1,5 +1,6 @@
 import time
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 class OptimalTouring:
     def __init__(self, _siteFile):
@@ -16,7 +17,7 @@ class OptimalTouring:
     # input will be provided by professor
     def readSites(self, fileName):
         ret = []
-        for i in range(200):
+        for i in range(300):
             ret.append([])
 
         with open(fileName, "r") as f:
@@ -47,33 +48,6 @@ class OptimalTouring:
         while ret[-1]==[]:
             ret = ret[:-1]
 
-        return ret
-
-    # Useless
-    # input format:
-    #   next_site stay_until stay_how_long
-    # next_site could be site_id, "closest", "closet_unclosed", "most_reward", "least_time", "most_time", or "most_efficient"
-    # unless site_id, other command will ignore visited sites
-    # most_efficient means highest reward/visit_time
-    # stay_until means you will stay at this place until the clock time is (stay_until/60):(stay_until%60)
-    # stay_until should not larger than 1440
-    # stay_until could also be "end_of_day", "end_of_visit", or "end_of_close/visit"
-    # stay_how_long means how long you will stay in this site
-    # stay_until and stay_how_long can filled with -1 or don't input
-    def readStrategy(self, fileName):
-        ret = []
-        with open(fileName, "r") as f:
-            lines = f.readlines()
-        for line in lines:
-            ret.append([-1, -1, -1])
-            line = line[:-1]
-            line = line.split(" ")
-            ret[-1][0] = line[0]
-            try:
-                ret[-1][1] = line[1]
-                ret[-1][2] = int(line[2])
-            except:
-                pass
         return ret
 
     # move and stay should be 2 seperate move
@@ -202,6 +176,56 @@ class OptimalTouring:
             matrix[site[1]][site[0]] = str(i + 1).zfill(3)
         plt.table(cellText=matrix, loc='center', rowLoc="center", cellLoc='center', )
         plt.axis('off')
+        plt.show()
+
+    def printPath(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
+
+        # Prepare a color map for days
+        colors = list(mcolors.TABLEAU_COLORS.keys())
+        num_days = len(self.visitedSites)
+        color_cycle = colors * ((num_days // len(colors)) + 1)
+
+        plt.figure(figsize=(12, 10))
+        max_x, max_y = 0, 0
+        min_x, min_y = float('inf'), float('inf')
+
+        # Collect all site coordinates
+        site_coords = {}
+        for idx, site in enumerate(self.sites):
+            if site == []:
+                continue
+            site_coords[idx + 1] = (site[0], site[1])
+            max_x = max(max_x, site[0])
+            max_y = max(max_y, site[1])
+            min_x = min(min_x, site[0])
+            min_y = min(min_y, site[1])
+
+        # Plot paths for each day
+        for day_idx, day_sites in enumerate(self.visitedSites):
+            if not day_sites:
+                continue
+            x_coords = []
+            y_coords = []
+            for site_id in day_sites:
+                x, y = site_coords[site_id]
+                x_coords.append(x)
+                y_coords.append(y)
+                # Annotate the site
+                plt.text(x, y, str(site_id), fontsize=9, ha='right', va='bottom')
+
+            # Plot the path for the day
+            plt.plot(x_coords, y_coords, marker='o', color=mcolors.TABLEAU_COLORS[color_cycle[day_idx]], label=f'Day {day_idx + 1}')
+
+        # Set plot limits with some padding
+        plt.xlim(min_x - 10, max_x + 10)
+        plt.ylim(min_y - 10, max_y + 10)
+        plt.xlabel('Avenue')
+        plt.ylabel('Street')
+        plt.title(f'Travel Path Visualization\nTotal Reward: {self.getRevenue()}')
+        plt.legend()
+        plt.grid(True)
         plt.show()
 
     # max day
