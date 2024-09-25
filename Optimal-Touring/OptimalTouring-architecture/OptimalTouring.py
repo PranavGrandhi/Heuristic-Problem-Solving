@@ -2,6 +2,9 @@ import time
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
+MAX_DAYS = 10
+MAX_SITES = 300
+
 class OptimalTouring:
     def __init__(self, _siteFile):
         self.startTime = time.time()
@@ -11,7 +14,7 @@ class OptimalTouring:
         self.revenue = 0
         self.current_site = -1
         self.passNight = 1
-        self.unfinished = [[0 for i in range(200)] for j in range(10)]
+        self.unfinished = [[0 for i in range(MAX_SITES)] for j in range(MAX_DAYS)]
         self.sites = self.readSites(_siteFile)
 
     # input will be provided by professor
@@ -36,13 +39,15 @@ class OptimalTouring:
                 continue
 
             line = line.split(" ")
+            if len(line) == 0 or all(i == "" for i in line):
+                continue
             if state == 1:
                 ret[int(line[0]) - 1] = [int(line[1]), int(line[2]), float(line[3]), float(line[4]),
-                                         [[0, 0] for i in range(10)]]
+                                         [[0, 0] for i in range(MAX_DAYS)]]
             elif state == 2:
                 if ret[int(line[0]) - 1] == []:
                     raise Exception("Site " + str(line[0]) + " not exist")
-                ret[int(line[0]) - 1][4][int(line[1]) - 1] = [int(line[2]) * 60, int(line[3]) * 60]
+                ret[int(line[0]) - 1][4][int(line[1]) - 1] = [int(line[2]) * 60, (1 + int(line[3])) * 60]
                 self.day = max(self.day, int(line[1]))
 
         while ret[-1]==[]:
@@ -61,7 +66,7 @@ class OptimalTouring:
         while self.passNight:
             self.passNight -= 1
             self.visitedSites.append([])
-        if 200 >= siteId > 0:
+        if MAX_SITES >= siteId > 0:
             if self.sites[siteId-1] == []:
                 raise Exception("Site Not Exist")
             if self.getTime() % 1440 != 0:
