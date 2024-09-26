@@ -185,7 +185,7 @@ class Particle:
     def mutate(self, iteration, max_iterations):
         # Compute mutation_rate
         mutation_rate = 1 - (iteration / max_iterations)
-        MAX_MUTATIONS = 5  # Adjust as needed
+        MAX_MUTATIONS = 20  # Adjust as needed
         num_mutations = max(1, int(mutation_rate * MAX_MUTATIONS))
 
         for _ in range(num_mutations):
