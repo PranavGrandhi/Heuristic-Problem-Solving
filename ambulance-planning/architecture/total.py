@@ -7,7 +7,7 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
-
+from sklearn.cluster import KMeans
 
 # Utility function to calculate Manhattan distance
 def take_time(a, b):
@@ -149,36 +149,27 @@ def read_data(fname="input_data.txt"):
 
 # Example solution implementation
 def my_solution(pers, hosps, result_file):
-    """
-    Simple solution that writes hardcoded rescue plan to the output file.
-    """
+    x = np.array([[p.x, p.y] for p in pers])
+    kmeans = KMeans(n_clusters=len(hosps), random_state=0).fit(x)
+    i = 0
+    for hx, hy in kmeans.cluster_centers_:
+        hosps[i].x = int(hx)
+        hosps[i].y = int(hy)
+        i = i + 1
+
     with open(result_file, "w") as output_file:
         # Write the hospital coordinates as provided
-        output_file.write("H1:67,143\n")
-        output_file.write("H2:103,49\n")
-        output_file.write("H3:42,62\n")
-        output_file.write("H4:69,295\n")
-        output_file.write("H5:42,214\n\n")
+        for h in hosps:
+            output_file.write(f"H{h.hid}:{h.x},{h.y}\n")
+        output_file.write("\n")
 
-        # # Simulating a rescue plan with delay
-        # print("Waiting for 12 seconds...")
-        # time.sleep(123)
+        # Come up with a rescue plan.
+        # For each ambulance, rescue the closest 4 people that would survive and take them to the nearest hospital.
+        # Repeat until all people are rescued.
 
-        # Write the rescue plan as provided
-        output_file.write("0 H2 P124 P284 P273 P256 H2\n")
-        output_file.write("0 H4 P285 P167 P117 P154 H4\n")
-        output_file.write("0 H4 P58 P202 H4\n")
-        output_file.write("0 H5 P69 P221 P4 P116 H5\n")
-        output_file.write("75 H4 P275 P163 P37 P147 H4\n")
-        output_file.write("75 H4 P275 P163 P37 P147 H4\n")
-        output_file.write("86 H4 P125 P223 P114 P129 H5\n")
-        output_file.write("91 H4 P81 P73 P192 P101 H4\n")
-        output_file.write("95 H4 P65 P231 H4\n")
-        output_file.write("97 H4 P43 P185 P247 P25 H4\n")
-        output_file.write("100 H4 P283 P104 P300 H4\n")
-        output_file.write("101 H4 P193 P10 P289 H4\n")
+        # # Write the rescue plan as provided
+        # output_file.write("0 H2 P124 P284 P273 P256 H2\n")
 
-        # output_file.write("0 H5 P98 H5\n")
     print(f"Solution written to {result_file}")
 
 
