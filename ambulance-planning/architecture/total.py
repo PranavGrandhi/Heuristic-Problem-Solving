@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#76 best score till now
+
 import sys
 import time
 import os
@@ -149,29 +151,123 @@ def read_data(fname="input_data.txt"):
 
 # Example solution implementation
 def my_solution(pers, hosps, result_file):
+    from sklearn.cluster import KMeans
+    import numpy as np
+
+    # Perform k-means clustering to determine hospital locations
     x = np.array([[p.x, p.y] for p in pers])
     kmeans = KMeans(n_clusters=len(hosps), random_state=0).fit(x)
-    i = 0
-    for hx, hy in kmeans.cluster_centers_:
+    for i, (hx, hy) in enumerate(kmeans.cluster_centers_):
         hosps[i].x = int(hx)
         hosps[i].y = int(hy)
-        i = i + 1
 
     with open(result_file, "w") as output_file:
-        # Write the hospital coordinates as provided
+        # Write the hospital coordinates to the output file
         for h in hosps:
             output_file.write(f"H{h.hid}:{h.x},{h.y}\n")
         output_file.write("\n")
 
-        # Come up with a rescue plan.
-        # For each ambulance, rescue the closest 4 people that would survive and take them to the nearest hospital.
-        # Repeat until all people are rescued.
+        # Create a list of unrescued persons
+        unrescued_persons = pers.copy()
 
-        # # Write the rescue plan as provided
-        # output_file.write("0 H2 P124 P284 P273 P256 H2\n")
+        # Main loop: While there are unrescued persons
+        while unrescued_persons:
+            any_rescued_in_this_iteration = False  # Flag to check if anyone was rescued in this iteration
 
-    print(f"Solution written to {result_file}")
+            # For each hospital
+            for hosp in hosps:
+                # While there are ambulances available at this hospital
+                while hosp.num_amb > 0:
+                    # Get the earliest available ambulance time at this hospital
+                    hosp.amb_time.sort()
+                    start_time = hosp.amb_time[0]
 
+                    # Initialize variables for the route
+                    current_time = start_time
+                    current_location = (hosp.x, hosp.y)
+                    route = [f"{current_time} H{hosp.hid}"]
+                    picked_persons = []
+
+                    # Find up to 4 unrescued persons who can be rescued
+                    # Calculate the estimated time to reach and rescue each unrescued person
+                    candidates = []
+                    for p in unrescued_persons:
+                        # Travel time from current location to person's location
+                        travel_time_to_p = abs(current_location[0] - p.x) + abs(current_location[1] - p.y)
+                        # Time to load the person (1 minute)
+                        # Travel time from person's location to the hospital
+                        travel_time_to_hosp = abs(p.x - hosp.x) + abs(p.y - hosp.y)
+                        # Total estimated time to rescue this person
+                        total_time = current_time + travel_time_to_p + 1 + travel_time_to_hosp + 1  # +1 for unloading
+                        # Check if the person can be rescued within their survival time
+                        if total_time <= p.st:
+                            candidates.append((p, travel_time_to_p))
+
+                    # If no candidates are found, break the loop
+                    if not candidates:
+                        break
+
+                    # Sort candidates based on travel time to them (closer persons first)
+                    candidates.sort(key=lambda x: x[1])
+
+                    # Select up to 4 persons to rescue
+                    num_to_pick = min(4, len(candidates))
+                    for idx in range(num_to_pick):
+                        p, travel_time_to_p = candidates[idx]
+                        # Update current time and location
+                        current_time += travel_time_to_p
+                        current_location = (p.x, p.y)
+                        # Load the person (1 minute)
+                        current_time += 1
+                        # Add person to route
+                        route.append(f"P{p.pid}")
+                        picked_persons.append(p)
+                        # Remove person from unrescued_persons
+                        unrescued_persons.remove(p)
+                        any_rescued_in_this_iteration = True  # Set flag to True since we rescued someone
+
+                    # Travel back to the hospital
+                    travel_time_to_hosp = abs(current_location[0] - hosp.x) + abs(current_location[1] - hosp.y)
+                    current_time += travel_time_to_hosp
+                    current_location = (hosp.x, hosp.y)
+                    # Unload the persons (1 minute for up to 4 persons)
+                    current_time += 1
+                    # Add ending hospital to route
+                    route.append(f"H{hosp.hid}")
+
+                    # Write the route to the output file
+                    output_file.write(" ".join(route) + "\n")
+
+                    # Update ambulance availability
+                    # The ambulance becomes available at the ending hospital at time current_time
+                    # Since we're returning to the same hospital, update its ambulance times
+                    hosp.amb_time[0] = current_time  # Update the ambulance's availability time
+                    # Sort the ambulance times again
+                    hosp.amb_time.sort()
+
+                    # Mark persons as rescued
+                    for p in picked_persons:
+                        p.rescued = True
+
+                    # If there are no more unrescued persons, break
+                    if not unrescued_persons:
+                        break
+
+                    # If no more candidates can be rescued, break
+                    if len(picked_persons) < 4:
+                        break
+
+                # If there are no more unrescued persons, break
+                if not unrescued_persons:
+                    break
+
+            # After checking all hospitals, if no one was rescued in this iteration, it means
+            # no remaining persons can be rescued. Break out of the loop and finish.
+            if not any_rescued_in_this_iteration:
+                print("No more persons can be rescued. Finishing the rescue plan.")
+                break
+
+        print(f"Solution written to {result_file}")
 
 # Function to read the result file and process paths for visualization
 def readresults(persons, hospitals, fname):
@@ -340,6 +436,7 @@ if __name__ == "__main__":
             sys.exit()
 
     # Read results for visualization
+    persons, hospitals = read_data(input_file)
     paths = readresults(persons, hospitals, result_file)  # Get paths after processing results
 
     # After processing results, visualize the paths
