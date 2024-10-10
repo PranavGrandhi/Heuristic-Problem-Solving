@@ -150,18 +150,29 @@ def read_data(fname="input_data.txt"):
 
     return persons, hospitals
 
-def custom_distance(p1, p2, alpha=1, beta=1):
+def normalized_urgency(p_st, pers):
+    max_st = max([p.st for p in pers])
+    min_st = min([p.st for p in pers])
+    return (max_st - p_st) / (max_st - min_st + 1e-6)
+
+def custom_distance(p1, p2, pers, alpha=1, beta=10):
     spatial_dist = abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
-    urgency_p1 = 1 / p1[2]
-    urgency_p2 = 1 / p2[2]
+
+    # Normalized urgency scores
+    urgency_p1 = normalized_urgency(p1[2], pers)
+    urgency_p2 = normalized_urgency(p2[2], pers)
+
+    # Time distance (difference in urgency)
     time_dist = abs(urgency_p1 - urgency_p2)
+
+    # Combined distance
     return alpha * spatial_dist + beta * time_dist
 
 # Example solution implementation
 def my_solution(pers, hosps, result_file):
     # Perform k-means clustering to determine hospital locations
     x = np.array([[p.x, p.y, p.st] for p in pers])
-    distance_matrix = pairwise_distances(x, metric=lambda u, v: custom_distance(u, v))
+    distance_matrix = pairwise_distances(x, metric=lambda u, v: custom_distance(u, v, pers))
     kmedoids = KMedoids(n_clusters=len(hosps), metric='precomputed', random_state=0).fit(distance_matrix)
 
     medoid_indices = kmedoids.medoid_indices_
