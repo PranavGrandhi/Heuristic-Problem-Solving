@@ -188,73 +188,131 @@ def my_solution(pers, hosps, result_file):
                     route = [f"{current_time} H{hosp.hid}"]
                     picked_persons = []
 
-                    # Find up to 4 unrescued persons who can be rescued
-                    # Calculate the estimated time to reach and rescue each unrescued person
-                    candidates = []
-                    for p in unrescued_persons:
-                        # Travel time from current location to person's location
-                        travel_time_to_p = abs(current_location[0] - p.x) + abs(current_location[1] - p.y)
-                        # Time to load the person (1 minute)
-                        # Travel time from person's location to the hospital
-                        travel_time_to_hosp = abs(p.x - hosp.x) + abs(p.y - hosp.y)
-                        # Total estimated time to rescue this person
-                        total_time = current_time + travel_time_to_p + 1 + travel_time_to_hosp + 1  # +1 for unloading
-                        # Check if the person can be rescued within their survival time
-                        if total_time <= p.st:
-                            candidates.append((p, travel_time_to_p))
+                    # Ambulance capacity
+                    capacity = 4
 
-                    # If no candidates are found, break the loop
-                    if not candidates:
-                        break
+                    # Build the route by selecting persons one by one
+                    while capacity > 0:
+                        # Find candidates who can be picked next
+                        candidates = []
 
-                    # Sort candidates based on travel time to them (closer persons first)
-                    candidates.sort(key=lambda x: x[1])
+                        for p in unrescued_persons:
+                            # Calculate travel time from current location to person
+                            travel_time_to_p = abs(current_location[0] - p.x) + abs(current_location[1] - p.y)
 
-                    # Select up to 4 persons to rescue
-                    num_to_pick = min(4, len(candidates))
-                    for idx in range(num_to_pick):
-                        p, travel_time_to_p = candidates[idx]
-                        # Update current time and location
-                        current_time += travel_time_to_p
-                        current_location = (p.x, p.y)
-                        # Load the person (1 minute)
+                            # Time to load the person (1 minute)
+                            load_time = 1
+
+                            # Estimate arrival time at this person's location
+                            arrival_time_at_p = current_time + travel_time_to_p
+
+                            # Update time after loading the person
+                            time_after_loading_p = arrival_time_at_p + load_time
+
+                            # Calculate travel time from person's location back to hospital
+                            travel_time_to_hosp = abs(p.x - hosp.x) + abs(p.y - hosp.y)
+
+                            # Estimate arrival time at hospital if we go directly after picking up this person
+                            arrival_time_at_hosp = time_after_loading_p + travel_time_to_hosp
+
+                            # Add unloading time at hospital (1 minute for all passengers)
+                            total_time_if_only_p = arrival_time_at_hosp + 1
+
+                            # For cumulative route, we need to consider the time to deliver all picked persons after picking up this person
+
+                            # Check if this person can be delivered to the hospital before their survival time
+                            if total_time_if_only_p <= p.st:
+                                # Candidate is potentially rescuable; we will need to check cumulative effect
+                                candidates.append((p, p.st))
+
+                        if not candidates:
+                            break  # No candidates can be picked next
+
+                        # Sort candidates by their survival times (earliest survival time first)
+                        candidates.sort(key=lambda x: x[0].st)
+
+                        person_added = False
+                        # Try to add candidates one by one
+                        for p, _ in candidates:
+                            # Calculate cumulative times
+                            # Travel time to p
+                            travel_time_to_p = abs(current_location[0] - p.x) + abs(current_location[1] - p.y)
+                            # Update current_time to arrival at p
+                            arrival_time_at_p = current_time + travel_time_to_p
+                            # Load time
+                            load_time = 1
+                            time_after_loading_p = arrival_time_at_p + load_time
+                            # Update current location
+                            new_current_location = (p.x, p.y)
+
+                            # Now estimate the time to get back to hospital from new current location
+                            travel_time_to_hosp = abs(new_current_location[0] - hosp.x) + abs(new_current_location[1] - hosp.y)
+
+                            # Total time to return to hospital after picking up this person
+                            total_time_to_hospital = time_after_loading_p + travel_time_to_hosp
+
+                            # Add unloading time
+                            total_time_with_unloading = total_time_to_hospital + 1
+
+                            # For each person already picked, check if they can be delivered before their survival time
+                            all_persons_delivered_on_time = True
+                            for idx, picked_p in enumerate(picked_persons):
+                                # Calculate time from when they were picked to arrival at hospital
+                                # We need to estimate the total time from their pickup to hospital arrival
+                                # For simplicity, we can assume they will be delivered at total_time_with_unloading
+                                time_since_picked = total_time_with_unloading - picked_p['pickup_time']
+                                if total_time_with_unloading > picked_p['person'].st:
+                                    all_persons_delivered_on_time = False
+                                    break
+
+                            # Check if the new person can be delivered on time
+                            if total_time_with_unloading > p.st:
+                                all_persons_delivered_on_time = False
+
+                            if all_persons_delivered_on_time:
+                                # We can add this person to the route
+                                current_time = time_after_loading_p  # Update current time after loading
+                                current_location = new_current_location  # Update current location
+                                picked_persons.append({'person': p, 'pickup_time': current_time})
+                                route.append(f"P{p.pid}")
+                                unrescued_persons.remove(p)
+                                capacity -= 1
+                                any_rescued_in_this_iteration = True
+                                person_added = True
+                                break  # Go back to while capacity > 0 loop to find next person
+
+                        if not person_added:
+                            # No suitable candidate could be added without exceeding survival times
+                            break
+
+                    # After picking up persons, travel back to hospital
+                    if picked_persons:
+                        # Travel time back to hospital from current location
+                        travel_time_to_hosp = abs(current_location[0] - hosp.x) + abs(current_location[1] - hosp.y)
+                        current_time += travel_time_to_hosp
+                        current_location = (hosp.x, hosp.y)
+                        # Unload time
                         current_time += 1
-                        # Add person to route
-                        route.append(f"P{p.pid}")
-                        picked_persons.append(p)
-                        # Remove person from unrescued_persons
-                        unrescued_persons.remove(p)
-                        any_rescued_in_this_iteration = True  # Set flag to True since we rescued someone
+                        # Add ending hospital to route
+                        route.append(f"H{hosp.hid}")
 
-                    # Travel back to the hospital
-                    travel_time_to_hosp = abs(current_location[0] - hosp.x) + abs(current_location[1] - hosp.y)
-                    current_time += travel_time_to_hosp
-                    current_location = (hosp.x, hosp.y)
-                    # Unload the persons (1 minute for up to 4 persons)
-                    current_time += 1
-                    # Add ending hospital to route
-                    route.append(f"H{hosp.hid}")
+                        # Write the route to the output file
+                        output_file.write(" ".join(route) + "\n")
 
-                    # Write the route to the output file
-                    output_file.write(" ".join(route) + "\n")
+                        # Update ambulance availability
+                        hosp.amb_time[0] = current_time  # Update the ambulance's availability time
+                        # Sort the ambulance times again
+                        hosp.amb_time.sort()
 
-                    # Update ambulance availability
-                    # The ambulance becomes available at the ending hospital at time current_time
-                    # Since we're returning to the same hospital, update its ambulance times
-                    hosp.amb_time[0] = current_time  # Update the ambulance's availability time
-                    # Sort the ambulance times again
-                    hosp.amb_time.sort()
+                        # Reduce the number of ambulances by one (since it's now in use until current_time)
+                        # Note: In this implementation, we keep the ambulance count the same but update availability times
 
-                    # Mark persons as rescued
-                    for p in picked_persons:
-                        p.rescued = True
+                    else:
+                        # No persons were picked in this route
+                        break  # No point in continuing with this ambulance at this time
 
                     # If there are no more unrescued persons, break
                     if not unrescued_persons:
-                        break
-
-                    # If no more candidates can be rescued, break
-                    if len(picked_persons) < 4:
                         break
 
                 # If there are no more unrescued persons, break
@@ -267,7 +325,7 @@ def my_solution(pers, hosps, result_file):
                 print("No more persons can be rescued. Finishing the rescue plan.")
                 break
 
-        print(f"Solution written to {result_file}")
+    print(f"Solution written to {result_file}")
 
 # Function to read the result file and process paths for visualization
 def readresults(persons, hospitals, fname):
