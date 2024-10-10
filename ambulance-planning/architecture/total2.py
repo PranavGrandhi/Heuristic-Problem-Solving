@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances
+from sklearn_extra.cluster import KMedoids
 
 # Utility function to calculate Manhattan distance
 def take_time(a, b):
@@ -148,18 +150,24 @@ def read_data(fname="input_data.txt"):
 
     return persons, hospitals
 
+def custom_distance(p1, p2, alpha=1, beta=1):
+    spatial_dist = abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+    time_dist = abs(p1[2] - p2[2])
+    return alpha * spatial_dist + beta * time_dist
 
 # Example solution implementation
 def my_solution(pers, hosps, result_file):
-    from sklearn.cluster import KMeans
-    import numpy as np
-
     # Perform k-means clustering to determine hospital locations
-    x = np.array([[p.x, p.y] for p in pers])
-    kmeans = KMeans(n_clusters=len(hosps), random_state=0).fit(x)
-    for i, (hx, hy) in enumerate(kmeans.cluster_centers_):
-        hosps[i].x = int(hx)
-        hosps[i].y = int(hy)
+    x = np.array([[p.x, p.y, p.st] for p in pers])
+    distance_matrix = pairwise_distances(x, metric=lambda u, v: custom_distance(u, v))
+    kmedoids = KMedoids(n_clusters=len(hosps), metric='precomputed', random_state=0).fit(distance_matrix)
+
+    medoid_indices = kmedoids.medoid_indices_
+    medoids = x[medoid_indices]
+
+    for i, hosp in enumerate(hosps):
+        hosp.x = int(medoids[i][0])
+        hosp.y = int(medoids[i][1])
 
     with open(result_file, "w") as output_file:
         # Write the hospital coordinates to the output file
@@ -229,7 +237,7 @@ def my_solution(pers, hosps, result_file):
                                 # Calculate priority score
                                 # Adjust weights alpha and beta as needed
                                 alpha = 4.5  # Weight for travel time
-                                beta = -0.5  # Negative weight for remaining survival time to prioritize lower times
+                                beta = 0  # Negative weight for remaining survival time to prioritize lower times
                                 priority_score = alpha * travel_time_to_p + beta * remaining_survival_time
 
                                 candidates.append((p, priority_score, travel_time_to_p, remaining_survival_time))
