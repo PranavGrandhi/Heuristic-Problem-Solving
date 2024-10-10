@@ -150,7 +150,7 @@ def read_data(fname="input_data.txt"):
 
     return persons, hospitals
 
-def custom_distance(p1, p2, alpha=1, beta=1):
+def custom_distance(p1, p2, alpha=2, beta=1):
     spatial_dist = abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
     time_dist = abs(p1[2] - p2[2])
     return alpha * spatial_dist + beta * time_dist
