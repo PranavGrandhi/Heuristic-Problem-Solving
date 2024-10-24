@@ -21,6 +21,7 @@ class MyClient(EvasionClient):
     def __init__(self, port=4000):
         self.team_name = "VGA2"
         super().__init__(self.team_name, port)
+        self.built_walls = []
 
     def calculate_hunter_move(self, game: GameState) -> str:
         # Check if we can build a wall
@@ -67,7 +68,31 @@ class MyClient(EvasionClient):
                 return self.move_no_op()
 
             # Build the wall
-            return self.move_create_wall(wall)
+            
+            if len(game.walls) < self.config.max_walls:
+                self.built_walls.append(wall)
+                return self.move_create_wall(wall)
+            else:
+                #remove all walls that are not the closest to the prey from top and bottom
+                walls_to_keep_top = []
+                #find the closest wall to the prey from top
+                current_least_pos_top = MAX_HEIGHT
+                for wall in self.built_walls:
+                    if wall.y1 < game.prey_position.y and game.prey_position.y - wall.y1 < current_least_pos_top:
+                        current_least_pos_top = game.prey_position.y - wall.y1
+                        walls_to_keep_top = [wall]
+
+                #find the closest wall to the prey from bottom
+                walls_to_keep_bottom = []
+                current_least_pos_bottom = MAX_HEIGHT
+                for wall in self.built_walls:
+                    if wall.y1 > game.prey_position.y and wall.y1 - game.prey_position.y < current_least_pos_bottom:
+                        current_least_pos_bottom = wall.y1 - game.prey_position.y
+                        walls_to_keep_bottom = [wall]
+
+                walls_to_keep = walls_to_keep_top + walls_to_keep_bottom
+                walls_to_remove = [wall for wall in self.built_walls if wall not in walls_to_keep]
+                return self.move_remove_walls_and_create(walls_to_remove, wall)              
         else:
             # Cannot build wall yet
             return self.move_no_op()
