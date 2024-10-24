@@ -29,6 +29,24 @@ class MyClient(EvasionClient):
             game.hunter_last_wall_time is None
             or game.ticker - game.hunter_last_wall_time >= self.config.next_wall_time
         ):
+            #remove all walls that are not the closest to the prey from top and bottom
+            walls_to_keep_top = []
+            #find the closest wall to the prey from top
+            current_least_pos_top = MAX_HEIGHT
+            for wall in self.built_walls:
+                if wall.y1 < game.prey_position.y and game.prey_position.y - wall.y1 < current_least_pos_top:
+                    current_least_pos_top = game.prey_position.y - wall.y1
+                    walls_to_keep_top = [wall]
+            #find the closest wall to the prey from bottom
+            walls_to_keep_bottom = []
+            current_least_pos_bottom = MAX_HEIGHT
+            for wall in self.built_walls:
+                if wall.y1 > game.prey_position.y and wall.y1 - game.prey_position.y < current_least_pos_bottom:
+                    current_least_pos_bottom = wall.y1 - game.prey_position.y
+                    walls_to_keep_bottom = [wall]
+            walls_to_keep = walls_to_keep_top + walls_to_keep_bottom
+            walls_to_remove = [wall for wall in self.built_walls if wall not in walls_to_keep]
+
             # Get hunter's previous position (before moving)
             hunter_prev_pos = game.hunter_position
 
@@ -51,21 +69,37 @@ class MyClient(EvasionClient):
 
             #prey is up and hunter is going down dont do anything
             if game.prey_position.y < new_hunter_y and new_hunter_y > hunter_prev_pos.y:
-                return self.move_no_op()
+                if len(game.walls) > 2:
+                    self.built_walls = walls_to_keep
+                    return self.move_only_remove_walls(walls_to_remove)
+                else:
+                    return self.move_no_op()
             
             #is prey is below but hunter is going up dont do anything
             if game.prey_position.y > new_hunter_y and new_hunter_y < hunter_prev_pos.y:
-                return self.move_no_op()
+                if len(game.walls) > 2:
+                    self.built_walls = walls_to_keep
+                    return self.move_only_remove_walls(walls_to_remove)
+                else:
+                    return self.move_no_op()
 
             # Check if the wall would touch the hunter's new position
             if new_hunter_y == wall_y:
                 # Wall would touch hunter's new position
-                return self.move_no_op()
+                if len(game.walls) > 2:
+                    self.built_walls = walls_to_keep
+                    return self.move_only_remove_walls(walls_to_remove)
+                else:
+                    return self.move_no_op()
 
             # Check if the wall would touch the prey's position
             if game.prey_position.y == wall_y:
                 # Wall would touch prey's position
-                return self.move_no_op()
+                if len(game.walls) > 2:
+                    self.built_walls = walls_to_keep
+                    return self.move_only_remove_walls(walls_to_remove)
+                else:
+                    return self.move_no_op()
 
             # Build the wall
             
@@ -73,29 +107,34 @@ class MyClient(EvasionClient):
                 self.built_walls.append(wall)
                 return self.move_create_wall(wall)
             else:
-                #remove all walls that are not the closest to the prey from top and bottom
-                walls_to_keep_top = []
-                #find the closest wall to the prey from top
-                current_least_pos_top = MAX_HEIGHT
-                for wall in self.built_walls:
-                    if wall.y1 < game.prey_position.y and game.prey_position.y - wall.y1 < current_least_pos_top:
-                        current_least_pos_top = game.prey_position.y - wall.y1
-                        walls_to_keep_top = [wall]
-
-                #find the closest wall to the prey from bottom
-                walls_to_keep_bottom = []
-                current_least_pos_bottom = MAX_HEIGHT
-                for wall in self.built_walls:
-                    if wall.y1 > game.prey_position.y and wall.y1 - game.prey_position.y < current_least_pos_bottom:
-                        current_least_pos_bottom = wall.y1 - game.prey_position.y
-                        walls_to_keep_bottom = [wall]
-
-                walls_to_keep = walls_to_keep_top + walls_to_keep_bottom
-                walls_to_remove = [wall for wall in self.built_walls if wall not in walls_to_keep]
+                #remove walls from built walls that are not the closest to the prey
+                self.built_walls = walls_to_keep
+                self.built_walls.append(wall)
                 return self.move_remove_walls_and_create(walls_to_remove, wall)              
         else:
             # Cannot build wall yet
-            return self.move_no_op()
+            walls_to_keep_top = []
+            #find the closest wall to the prey from top
+            current_least_pos_top = MAX_HEIGHT
+            for wall in self.built_walls:
+                if wall.y1 < game.prey_position.y and game.prey_position.y - wall.y1 < current_least_pos_top:
+                    current_least_pos_top = game.prey_position.y - wall.y1
+                    walls_to_keep_top = [wall]
+            #find the closest wall to the prey from bottom
+            walls_to_keep_bottom = []
+            current_least_pos_bottom = MAX_HEIGHT
+            for wall in self.built_walls:
+                if wall.y1 > game.prey_position.y and wall.y1 - game.prey_position.y < current_least_pos_bottom:
+                    current_least_pos_bottom = wall.y1 - game.prey_position.y
+                    walls_to_keep_bottom = [wall]
+            walls_to_keep = walls_to_keep_top + walls_to_keep_bottom
+            walls_to_remove = [wall for wall in self.built_walls if wall not in walls_to_keep]
+            
+            if len(game.walls) > 2:
+                self.built_walls = walls_to_keep
+                return self.move_only_remove_walls(walls_to_remove)
+            else:
+                return self.move_no_op()
 
     def calculate_prey_move(self, game: GameState) -> str:
         dx = game.hunter_position.x - game.prey_position.x
