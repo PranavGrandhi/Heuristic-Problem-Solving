@@ -112,7 +112,7 @@ let wallIsValid (game: State) (wall: Wall) : bool =
     // The wall is within bounds
     let withinBounds = wallInBounds wall
     // The wall does not collide any other wall
-    let doesNotCollideWalls = not (wallCollidesWalls wall game.Walls)
+    // let doesNotCollideWalls = not (wallCollidesWalls wall game.Walls)
     // The end points of the wall are greater than or equal to the start points
     let endPointsAfterStartPoints = 
         match wall with 
@@ -132,8 +132,8 @@ let wallIsValid (game: State) (wall: Wall) : bool =
         logRed "[HBUG] Created wall is invalid: collides current prey position. Ignoring."
     elif not withinBounds then 
         logRed "[HBUG] Created wall is invalid: out of bounds. Ignoring."
-    elif not doesNotCollideWalls then 
-        logRed "[HBUG] Created wall is invalid: collides with other walls. Ignoring."
+    //elif not doesNotCollideWalls then 
+        //logRed "[HBUG] Created wall is invalid: collides with other walls. Ignoring."
     elif not endPointsAfterStartPoints then 
         logRed "[HBUG] Created wall is invalid: end points are before start points. Ignoring."
     else ()
@@ -145,7 +145,7 @@ let wallIsValid (game: State) (wall: Wall) : bool =
     && hasNotExceededMaxWalls
     && doesNotCollidePrey
     && withinBounds
-    && doesNotCollideWalls
+    // && doesNotCollideWalls
     && endPointsAfterStartPoints
 
 
