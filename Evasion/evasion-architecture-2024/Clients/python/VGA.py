@@ -29,6 +29,9 @@ class MyClient(EvasionClient):
             game.hunter_last_wall_time is None
             or game.ticker - game.hunter_last_wall_time >= self.config.next_wall_time
         ):
+            # Get hunter's previous position (before moving)
+            hunter_prev_pos = game.hunter_position
+
             #remove all walls that are not the closest to the prey from top and bottom
             walls_to_keep_top = []
             #find the closest wall to the prey from top
@@ -47,8 +50,19 @@ class MyClient(EvasionClient):
             walls_to_keep = walls_to_keep_top + walls_to_keep_bottom
             walls_to_remove = [wall for wall in self.built_walls if wall not in walls_to_keep]
 
-            # Get hunter's previous position (before moving)
-            hunter_prev_pos = game.hunter_position
+            new_hunter_x = game.hunter_position.x + game.hunter_velocity.x
+            #if the width is less than 20, then start building vertical walls in between the 2 horizontal ones
+            if len(walls_to_keep) == 2:
+                distance = abs(walls_to_keep[1].y1 - walls_to_keep[0].y1)
+                if distance < 15:
+                    # If the hunter is moving right and the prey is also to the right, build a vertical wall
+                    if new_hunter_x > game.hunter_position.x and game.prey_position.x > game.hunter_position.x:
+                        vertical_wall = Wall(x1=hunter_prev_pos.x, y1=min(walls_to_keep[0].y1, walls_to_keep[1].y1), x2=hunter_prev_pos.x, y2=max(walls_to_keep[0].y1, walls_to_keep[1].y1))
+                        return self.move_create_wall(vertical_wall)
+                    # If the hunter is moving left and the prey is also to the left, build a vertical wall
+                    elif new_hunter_x < game.hunter_position.x and game.prey_position.x < game.hunter_position.x:
+                        vertical_wall = Wall(x1=hunter_prev_pos.x, y1=min(walls_to_keep[0].y1, walls_to_keep[1].y1), x2=hunter_prev_pos.x, y2=max(walls_to_keep[0].y1, walls_to_keep[1].y1))
+                        return self.move_create_wall(vertical_wall)
 
             # The wall must touch the hunter's previous position
             wall_y = hunter_prev_pos.y
@@ -64,7 +78,6 @@ class MyClient(EvasionClient):
             wall = Wall(x1=x1, y1=wall_y, x2=x2, y2=wall_y)
 
             # Calculate hunter's new position after moving
-            new_hunter_x = game.hunter_position.x + game.hunter_velocity.x
             new_hunter_y = game.hunter_position.y + game.hunter_velocity.y
 
             #prey is up and hunter is going down dont do anything
