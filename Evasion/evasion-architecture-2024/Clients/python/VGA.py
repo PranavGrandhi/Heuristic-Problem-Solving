@@ -19,7 +19,7 @@ TODO list for your team if you wish to use this client:
 
 class MyClient(EvasionClient):
     def __init__(self, port=4000):
-        self.team_name = "VGA2"
+        self.team_name = "VGA"
         super().__init__(self.team_name, port)
         self.built_walls = []
 
@@ -54,7 +54,7 @@ class MyClient(EvasionClient):
             #if the width is less than 20, then start building vertical walls in between the 2 horizontal ones
             if len(walls_to_keep) == 2:
                 distance = abs(walls_to_keep[1].y1 - walls_to_keep[0].y1)
-                if distance < 15:
+                if distance < 10:
                     # If the hunter is moving right and the prey is also to the right, build a vertical wall
                     if new_hunter_x > game.hunter_position.x and game.prey_position.x > game.hunter_position.x:
                         vertical_wall = Wall(x1=hunter_prev_pos.x, y1=min(walls_to_keep[0].y1, walls_to_keep[1].y1), x2=hunter_prev_pos.x, y2=max(walls_to_keep[0].y1, walls_to_keep[1].y1))
