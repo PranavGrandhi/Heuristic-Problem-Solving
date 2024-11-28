@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Battle</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background: white;
+        }
+        #gameInfo {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .player-info {
+            text-align: center;
+            padding: 10px;
+        }
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="gameInfo">
+            <div id="red-player" class="player-info">
+                <h3 style="color: red;">Red Player</h3>
+                <div class="player-stat">
+                    <span class="stat-label">Score:</span>
+                    <span id="redScore" class="stat-value">0</span>
+                </div>
+                <div class="player-stat">
+                    <span class="stat-label">Solution:</span>
+                    <span id="redSolution" class="stat-value">100</span>
+                </div>
+                <div class="solution-bar">
+                    <div class="solution-fill red"></div>
+                </div>
+            </div>
+            
+            <div id="controls">
+                <div class="control-item">
+                    <span class="stat-label">Current Turn:</span>
+                    <span id="currentTurn" class="control-value">Red</span>
+                </div>
+                <div class="control-item">
+                    <span class="stat-label">Size:</span>
+                    <span id="bubbleSize" class="control-value">1</span>
+                    <span class="stat-label">(↑↓ to change)</span>
+                </div>
+                <div class="control-item">
+                    <span class="stat-label">Angle:</span>
+                    <span id="bubbleAngle" class="control-value">45°</span>
+                    <span class="stat-label">(1,2 to change)</span>
+                </div>
+                <div class="control-item">
+                    <span class="stat-label">Time Left:</span>
+                    <span id="timeLeft" class="control-value">5s</span>
+                </div>
+                <p id="errorMessage" class="error-message"></p>
+            </div>
+
+            <div id="blue-player" class="player-info">
+                <h3 style="color: blue;">Blue Player</h3>
+                <div class="player-stat">
+                    <span class="stat-label">Score:</span>
+                    <span id="blueScore" class="stat-value">0</span>
+                </div>
+                <div class="player-stat">
+                    <span class="stat-label">Solution:</span>
+                    <span id="blueSolution" class="stat-value">100</span>
+                </div>
+                <div class="solution-bar">
+                    <div class="solution-fill blue"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio Context and Sound Effects Manager
+        class GameAudioManager {
+            constructor() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.sounds = {};
+                this.isMuted = false;
+                this.initializeSounds();
+            }
+
+            async initializeSounds() {
+                // Create oscillator-based sound effects
+                this.sounds.pop = this.createPopSound();
+                this.sounds.bounce = this.createBounceSound();
+                this.sounds.collision = this.createCollisionSound();
+                this.sounds.score = this.createScoreSound();
+                this.sounds.launch = this.createLaunchSound();
+                this.sounds.gameOver = this.createGameOverSound();
+            }
+
+            createPopSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    osc.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
+                    osc.frequency.exponentialRampToValueAtTime(783.99, this.audioContext.currentTime + 0.1); // G5
+                    
+                    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.1);
+                };
+            }
+
+            createBounceSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    osc.frequency.setValueAtTime(220, this.audioContext.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, this.audioContext.currentTime + 0.1);
+                    
+                    gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.1);
+                };
+            }
+
+            createCollisionSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    const filter = this.audioContext.createBiquadFilter();
+                    
+                    osc.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1000, this.audioContext.currentTime);
+                    
+                    osc.frequency.setValueAtTime(100, this.audioContext.currentTime);
+                    osc.frequency.linearRampToValueAtTime(500, this.audioContext.currentTime + 0.15);
+                    
+                    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.15);
+                };
+            }
+
+            createScoreSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    osc.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, this.audioContext.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, this.audioContext.currentTime + 0.2); // G5
+                    
+                    gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.3);
+                };
+            }
+
+            createLaunchSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    osc.frequency.setValueAtTime(220, this.audioContext.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(440, this.audioContext.currentTime + 0.2);
+                    
+                    gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.2);
+                };
+            }
+
+            createGameOverSound() {
+                return () => {
+                    if (this.isMuted) return;
+                    
+                    const osc = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    osc.frequency.setValueAtTime(440, this.audioContext.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, this.audioContext.currentTime + 0.5);
+                    
+                    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.5);
+                };
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                return this.isMuted;
+            }
+
+            playSound(soundName) {
+                if (this.sounds[soundName]) {
+                    this.sounds[soundName]();
+                }
+            }
+        }
+
+        // Export the audio manager
+const gameAudio = new GameAudioManager();
+    </script>
+
+    <script>
+        // import { gameAudio } from './gameAudio.js';
+
+        // Game Configuration Constants
+        const CONFIG = {
+            CANVAS: {
+                WIDTH: 800,
+                HEIGHT: 600
+            },
+            BUBBLE: {
+                MIN_SIZE: 1,
+                MAX_SIZE: 8,
+                BASE_SPEED: 5,
+                RADIUS_MULTIPLIER: 5,
+                OPACITY: 0.6,
+                SHINE_OFFSET: 0.35,    // Controls the position of the shine effect
+                SHINE_RADIUS: 0.5,     // Controls the size of the shine effect
+                BORDER_WIDTH: 2,       // Width of bubble border
+                INNER_OPACITY: 0.6,    // Main bubble opacity
+                SHINE_OPACITY: 0.4     // Shine effect opacity
+            },
+            ANGLE: {
+                MIN: -85,
+                MAX: 85,
+                STEP: 5,
+                DEFAULT: 0
+            },
+            GAME: {
+                INITIAL_SOLUTION: 200,
+                SIMULATION_TIME: 2000,
+                TURN_SKIP_DELAY: 1000,
+                COLLISION: {
+                    BOTTOM_THIRD_RATIO: 0.66
+                }
+            },
+            PLAYERS: {
+                RED: 'red',
+                BLUE: 'blue'
+            },
+            FONTS: {
+                GAME_OVER: '48px Arial',
+                SCORE: '24px Arial'
+            },
+            MESSAGES: {
+                NO_SOLUTION: 'Not enough solution - skipping turn',
+                OVERLAP: 'Cannot place bubble here - overlapping with existing bubble',
+                SIZE_TOO_LARGE: 'Not enough solution for larger bubble',
+                SOLUTION_INSUFFICIENT: 'Not enough solution for this bubble size'
+            },
+            UI: {
+                COLORS: {
+                    RED_GRADIENT: ['#ff6b6b', '#ff0000'],
+                    BLUE_GRADIENT: ['#6b96ff', '#0000ff'],
+                    BACKGROUND: '#1a1a2e',
+                    PANEL: '#162447',
+                    TEXT: '#e6e6e6',
+                    HIGHLIGHT: '#ffd700'
+                },
+                ANIMATIONS: {
+                    SCORE_POPUP_DURATION: 1000,
+                    TURN_TRANSITION_DURATION: 500
+                }
+            }
+        };
+
+        class Bubble {
+            constructor(x, y, size, angle, color, isNew = false) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.radius = size * CONFIG.BUBBLE.RADIUS_MULTIPLIER;
+                this.angle = angle * Math.PI / 180;
+                this.color = color;
+                this.speed = (8 + (9 - size)) / 5;
+                this.dx = Math.sin(this.angle) * this.speed;
+                this.dy = -Math.cos(this.angle) * this.speed;
+                this.volume = Math.PI * this.radius * this.radius;
+                this.destroyed = false;
+                this.isNew = isNew;
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x - this.radius < 0 || this.x + this.radius > CONFIG.CANVAS.WIDTH) {
+                    gameAudio.playSound('bounce');
+                    this.dx = -this.dx;
+                    this.x = Math.max(this.radius, Math.min(CONFIG.CANVAS.WIDTH - this.radius, this.x));
+                }
+
+                if (this.y + this.radius > CONFIG.CANVAS.HEIGHT) {
+                    gameAudio.playSound('score');
+                    this.dy = -this.dy;
+                    this.y = CONFIG.CANVAS.HEIGHT - this.radius;
+                }
+
+                if (this.y - this.radius < 0) {
+                    gameAudio.playSound('score');
+                    return true;
+                }
+                return false;
+            }
+
+                draw(ctx) {
+                // Create circular gradient for the main bubble
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius
+                );
+                
+                // Create shiny bubble effect
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(0.8, this.color);
+                gradient.addColorStop(1, this.adjustColor(this.color, -30));  // Darker edge
+
+                // Draw main bubble
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.globalAlpha = CONFIG.BUBBLE.INNER_OPACITY;
+                ctx.fill();
+
+                // Draw border
+                ctx.globalAlpha = 1;
+                ctx.lineWidth = CONFIG.BUBBLE.BORDER_WIDTH;
+                ctx.strokeStyle = this.adjustColor(this.color, 30);  // Lighter border
+                ctx.stroke();
+
+                // Add shine effect
+                const shineX = this.x - this.radius * CONFIG.BUBBLE.SHINE_OFFSET;
+                const shineY = this.y - this.radius * CONFIG.BUBBLE.SHINE_OFFSET;
+                const shineRadius = this.radius * CONFIG.BUBBLE.SHINE_RADIUS;
+                
+                const shineGradient = ctx.createRadialGradient(
+                    shineX, shineY, 0,
+                    shineX, shineY, shineRadius
+                );
+                
+                shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                ctx.beginPath();
+                ctx.arc(shineX, shineY, shineRadius, 0, Math.PI * 2);
+                ctx.fillStyle = shineGradient;
+                ctx.globalAlpha = CONFIG.BUBBLE.SHINE_OPACITY;
+                ctx.fill();
+
+                // Reset global alpha
+                ctx.globalAlpha = 1;
+            }
+
+            // Helper method to adjust color brightness
+            adjustColor(color, amount) {
+                if (color === 'red' || color === 'blue') {
+                    const colorMap = {
+                        'red': [255, 0, 0],
+                        'blue': [0, 0, 255]
+                    };
+                    
+                    let [r, g, b] = colorMap[color];
+                    r = Math.max(0, Math.min(255, r + amount));
+                    g = Math.max(0, Math.min(255, g + amount));
+                    b = Math.max(0, Math.min(255, b + amount));
+                    
+                    return `rgb(${r}, ${g}, ${b})`;
+                }
+                return color;
+            }
+
+            intersects(other) {
+                const dx = this.x - other.x;
+                const dy = this.y - other.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                return distance < (this.radius + other.radius);
+            }
+
+            hitInBottomThird(other) {
+                return this.y > other.y + other.radius * CONFIG.GAME.COLLISION.BOTTOM_THIRD_RATIO;
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.bubbles = [];
+                this.currentPlayer = CONFIG.PLAYERS.RED;
+                this.gameState = 'placing';
+                this.simulationTime = CONFIG.GAME.SIMULATION_TIME;
+                this.timeLeft = CONFIG.GAME.SIMULATION_TIME / 1000;
+                this.currentSize = CONFIG.BUBBLE.MIN_SIZE;
+                this.lastUsedSize = CONFIG.BUBBLE.MIN_SIZE;
+                this.currentAngle = CONFIG.ANGLE.DEFAULT;
+                this.scores = { 
+                    [CONFIG.PLAYERS.RED]: 0, 
+                    [CONFIG.PLAYERS.BLUE]: 0 
+                };
+                this.solution = {
+                    [CONFIG.PLAYERS.RED]: CONFIG.GAME.INITIAL_SOLUTION, 
+                    [CONFIG.PLAYERS.BLUE]: CONFIG.GAME.INITIAL_SOLUTION
+                };
+                this.mouseX = CONFIG.CANVAS.WIDTH / 2;
+                this.errorMessage = '';
+                this.lastTimestamp = 0;
+                this.simulationStartTime = 0;
+
+                this.setupEventListeners();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            }
+
+            setupEventListeners() {
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (this.gameState === 'placing') {
+                        const rect = this.canvas.getBoundingClientRect();
+                        this.mouseX = e.clientX - rect.left;
+                        this.mouseX = Math.max(
+                            this.currentSize * CONFIG.BUBBLE.RADIUS_MULTIPLIER, 
+                            Math.min(CONFIG.CANVAS.WIDTH - this.currentSize * CONFIG.BUBBLE.RADIUS_MULTIPLIER, this.mouseX)
+                        );
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (this.gameState !== 'placing') return;
+
+                    const maxSize = this.getMaxAllowedSize();
+                    switch (e.key) {
+                        case 'ArrowUp':
+                            if (this.currentSize < maxSize) {
+                                this.currentSize = Math.min(CONFIG.BUBBLE.MAX_SIZE, this.currentSize + 1);
+                                this.errorMessage = '';
+                            } else {
+                                this.errorMessage = CONFIG.MESSAGES.SIZE_TOO_LARGE;
+                            }
+                            break;
+                        case 'ArrowDown':
+                            this.currentSize = Math.max(CONFIG.BUBBLE.MIN_SIZE, this.currentSize - 1);
+                            this.errorMessage = '';
+                            break;
+                        case '1':
+                            this.currentAngle = (this.currentAngle - CONFIG.ANGLE.STEP) % 360;
+                            if (this.currentAngle < CONFIG.ANGLE.MIN) this.currentAngle += 360;
+                            break;
+                        case '2':
+                            this.currentAngle = (this.currentAngle + CONFIG.ANGLE.STEP) % 360;
+                            if (this.currentAngle > CONFIG.ANGLE.MAX) this.currentAngle -= 360;
+                            break;
+                        case ' ':
+                            this.placeBubble();
+                            break;
+                    }
+                    this.updateUI();
+                });
+
+                this.canvas.addEventListener('click', () => {
+                    if (this.gameState === 'placing') {
+                        this.placeBubble();
+                    }
+                });
+            }
+
+            getMaxAllowedSize() {
+                const solution = this.solution[this.currentPlayer];
+                return Math.floor(Math.sqrt(solution));
+            }
+
+            canMakeBubble() {
+                return this.solution[this.currentPlayer] >= CONFIG.BUBBLE.MIN_SIZE * CONFIG.BUBBLE.MIN_SIZE;
+            }
+
+            canOtherPlayerPlay() {
+                const otherPlayer = this.currentPlayer === CONFIG.PLAYERS.RED ? CONFIG.PLAYERS.BLUE : CONFIG.PLAYERS.RED;
+                return this.solution[otherPlayer] >= CONFIG.BUBBLE.MIN_SIZE * CONFIG.BUBBLE.MIN_SIZE;
+            }
+
+            placeBubble() {
+                const requiredSolution = this.currentSize * this.currentSize;
+                if (this.solution[this.currentPlayer] < requiredSolution) {
+                    this.errorMessage = CONFIG.MESSAGES.SOLUTION_INSUFFICIENT;
+                    this.updateUI();
+                    return;
+                }
+
+                const newBubble = new Bubble(
+                    this.mouseX,
+                    CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
+                    this.currentSize,
+                    this.currentAngle,
+                    this.currentPlayer,
+                    true
+                );
+
+                if (this.bubbles.some(b => newBubble.intersects(b))) {
+                    this.errorMessage = CONFIG.MESSAGES.OVERLAP;
+                    this.updateUI();
+                    return;
+                }
+
+                this.errorMessage = '';
+                this.bubbles.push(newBubble);
+                this.solution[this.currentPlayer] -= requiredSolution;
+                gameAudio.playSound('launch');
+                this.startSimulation();
+            }
+
+            handleCollisions() {
+                for (let i = 0; i < this.bubbles.length; i++) {
+                    for (let j = i + 1; j < this.bubbles.length; j++) {
+                        const b1 = this.bubbles[i];
+                        const b2 = this.bubbles[j];
+
+                        if (!b1.destroyed && !b2.destroyed && b1.intersects(b2)) {
+                            if (b1.color !== b2.color) {
+                                const newBubble = b1.isNew ? b1 : b2;
+                                const existingBubble = b1.isNew ? b2 : b1;
+                                gameAudio.playSound('collision');
+
+                                if (newBubble.hitInBottomThird(existingBubble)) {
+                                    newBubble.destroyed = true;
+                                } else {
+                                    b1.destroyed = true;
+                                    b2.destroyed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for (let i = this.bubbles.length - 1; i >= 0; i--) {
+                    const bubble = this.bubbles[i];
+                    if (bubble.update()) {
+                        this.scores[bubble.color] += Math.round(bubble.volume);
+                        this.bubbles.splice(i, 1);
+                    } else if (bubble.destroyed) {
+                        this.bubbles.splice(i, 1);
+                    }
+                }
+            }
+
+            calculateTrajectoryEnd(x, y, angle) {
+                const radians = angle * Math.PI / 180;
+                const dx = Math.sin(radians);
+                const dy = -Math.cos(radians);
+                
+                let tX = Infinity;
+                let tY = Infinity;
+                
+                if (dx !== 0) {
+                    const tLeft = -x / dx;
+                    const tRight = (CONFIG.CANVAS.WIDTH - x) / dx;
+                    tX = Math.min(
+                        tLeft > 0 ? tLeft : Infinity,
+                        tRight > 0 ? tRight : Infinity
+                    );
+                }
+                
+                if (dy !== 0) {
+                    const tTop = -y / dy;
+                    const tBottom = (CONFIG.CANVAS.HEIGHT - y) / dy;
+                    tY = Math.min(
+                        tTop > 0 ? tTop : Infinity,
+                        tBottom > 0 ? tBottom : Infinity
+                    );
+                }
+                
+                const t = Math.min(tX, tY);
+                return {
+                    x: x + dx * t,
+                    y: y + dy * t
+                };
+            }
+
+            startSimulation() {
+                this.gameState = 'simulating';
+                this.simulationStartTime = performance.now();
+                this.updateUI();
+            }
+
+            switchPlayer() {
+                this.lastUsedSize = this.currentSize;
+                this.currentPlayer = this.currentPlayer === CONFIG.PLAYERS.RED ? CONFIG.PLAYERS.BLUE : CONFIG.PLAYERS.RED;
+                this.gameState = 'placing';
+                this.errorMessage = '';
+
+                if (!this.canMakeBubble()) {
+                    if (this.bubbles.length === 0 && !this.canOtherPlayerPlay()) {
+                        this.endGame();
+                    } else {
+                        this.errorMessage = CONFIG.MESSAGES.NO_SOLUTION;
+                        this.updateUI();
+                        this.startSimulation();
+                        // setTimeout(() => this.switchPlayer(), CONFIG.GAME.TURN_SKIP_DELAY);
+                        return;
+                    }
+                }
+
+                const maxSize = this.getMaxAllowedSize();
+                if (this.lastUsedSize <= maxSize) {
+                    this.currentSize = this.lastUsedSize;
+                } else {
+                    this.currentSize = CONFIG.BUBBLE.MIN_SIZE;
+                }
+
+                this.updateUI();
+            }
+
+            endGame() {
+                this.gameState = 'ended';
+                const winner = this.scores[CONFIG.PLAYERS.RED] > this.scores[CONFIG.PLAYERS.BLUE] ? CONFIG.PLAYERS.RED : 
+                              this.scores[CONFIG.PLAYERS.RED] < this.scores[CONFIG.PLAYERS.BLUE] ? CONFIG.PLAYERS.BLUE : 'Tie';
+                
+                this.errorMessage = '';
+                this.updateUI();
+                
+                this.ctx.fillStyle = 'black';
+                this.ctx.font = CONFIG.FONTS.GAME_OVER;
+                gameAudio.playSound('gameOver');
+                if (winner === 'Tie') {
+                    this.ctx.fillText(`Game Over - Tie!`, CONFIG.CANVAS.WIDTH/4, CONFIG.CANVAS.HEIGHT/2);
+                } else {
+                    const winnerText = winner.charAt(0).toUpperCase() + winner.slice(1);
+                    this.ctx.fillText(`Game Over - ${winnerText} Wins!`, CONFIG.CANVAS.WIDTH/6, CONFIG.CANVAS.HEIGHT/2);
+                }
+
+                this.ctx.font = CONFIG.FONTS.SCORE;
+                this.ctx.fillText(
+                    `Final Scores: Red ${Math.round(this.scores[CONFIG.PLAYERS.RED])} - Blue ${Math.round(this.scores[CONFIG.PLAYERS.BLUE])}`,
+                    CONFIG.CANVAS.WIDTH/3.2,
+                    CONFIG.CANVAS.HEIGHT/2 + 50
+                );
+            }
+
+            updateUI() {
+                document.getElementById('currentTurn').textContent = this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1);
+                document.getElementById('bubbleSize').textContent = this.currentSize;
+                document.getElementById('bubbleAngle').textContent = this.currentAngle;
+                document.getElementById('redScore').textContent = Math.round(this.scores[CONFIG.PLAYERS.RED]);
+                document.getElementById('blueScore').textContent = Math.round(this.scores[CONFIG.PLAYERS.BLUE]);
+                document.getElementById('redSolution').textContent = Math.round(this.solution[CONFIG.PLAYERS.RED]);
+                document.getElementById('blueSolution').textContent = Math.round(this.solution[CONFIG.PLAYERS.BLUE]);
+                document.getElementById('timeLeft').textContent = Math.ceil(this.timeLeft);
+                document.getElementById('errorMessage').textContent = this.errorMessage;
+
+                // Update solution bars
+                const redFill = document.querySelector('.solution-fill.red');
+                const blueFill = document.querySelector('.solution-fill.blue');
+                
+                if (redFill && blueFill) {
+                    const redPercentage = (this.solution[CONFIG.PLAYERS.RED] / CONFIG.GAME.INITIAL_SOLUTION) * 100;
+                    const bluePercentage = (this.solution[CONFIG.PLAYERS.BLUE] / CONFIG.GAME.INITIAL_SOLUTION) * 100;
+                    
+                    redFill.style.width = `${redPercentage}%`;
+                    blueFill.style.width = `${bluePercentage}%`;
+                    
+                    redFill.style.background = `linear-gradient(to right, ${CONFIG.UI.COLORS.RED_GRADIENT.join(', ')})`;
+                    blueFill.style.background = `linear-gradient(to right, ${CONFIG.UI.COLORS.BLUE_GRADIENT.join(', ')})`;
+                }
+
+                // Update active player highlighting
+                const redPlayer = document.getElementById('red-player');
+                const bluePlayer = document.getElementById('blue-player');
+                
+                if (redPlayer && bluePlayer) {
+                    redPlayer.classList.toggle('active', this.currentPlayer === CONFIG.PLAYERS.RED);
+                    bluePlayer.classList.toggle('active', this.currentPlayer === CONFIG.PLAYERS.BLUE);
+                }
+            }
+
+            gameLoop(timestamp) {
+                const deltaTime = timestamp - this.lastTimestamp;
+                this.lastTimestamp = timestamp;
+
+                this.ctx.clearRect(0, 0, CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);
+
+                if (this.gameState !== 'ended') {
+                    if (this.gameState === 'placing') {
+                        const maxSize = this.getMaxAllowedSize();
+                        if (this.currentSize <= maxSize) {
+                            const previewBubble = new Bubble(
+                                this.mouseX,
+                                CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
+                                this.currentSize,
+                                this.currentAngle,
+                                this.currentPlayer
+                            );
+                            this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
+                            previewBubble.draw(this.ctx);
+                            this.ctx.globalAlpha = 1;
+
+                            const endPoint = this.calculateTrajectoryEnd(
+                                this.mouseX,
+                                CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
+                                this.currentAngle
+                            );
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.mouseX, CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize);
+                            this.ctx.lineTo(endPoint.x, endPoint.y);
+                            this.ctx.strokeStyle = this.currentPlayer;
+                            this.ctx.stroke();
+                        }
+                    }
+
+                    if (this.gameState === 'simulating') {
+                        const elapsed = timestamp - this.simulationStartTime;
+                        this.timeLeft = (CONFIG.GAME.SIMULATION_TIME - elapsed) / 1000;
+
+                        this.handleCollisions();
+                        this.updateUI();
+
+                        if (elapsed >= CONFIG.GAME.SIMULATION_TIME) {
+                            this.switchPlayer();
+                        }
+                    }
+
+                    this.bubbles.forEach(bubble => bubble.draw(this.ctx));
+
+                    if (this.bubbles.length === 0 && !this.canMakeBubble() && !this.canOtherPlayerPlay()) {
+                        this.endGame();
+                        return;
+                    }
+                }
+
+                requestAnimationFrame(this.gameLoop.bind(this));
+            }
+
+            createScorePopup(x, y, score, color) {
+                const popup = document.createElement('div');
+                popup.className = 'score-popup';
+                popup.style.left = `${x}px`;
+                popup.style.top = `${y}px`;
+                popup.style.color = color;
+                popup.textContent = `+${Math.round(score)}`;
+                document.body.appendChild(popup);
+
+                setTimeout(() => popup.remove(), CONFIG.UI.ANIMATIONS.SCORE_POPUP_DURATION);
+            }
+
+            showTurnTransition() {
+                const indicator = document.createElement('div');
+                indicator.className = 'turn-indicator';
+                indicator.textContent = `${this.currentPlayer.toUpperCase()}'S TURN`;
+                indicator.style.color = this.currentPlayer;
+                document.body.appendChild(indicator);
+
+                setTimeout(() => {
+                    indicator.classList.add('visible');
+                }, 0);
+
+                setTimeout(() => {
+                    indicator.classList.remove('visible');
+                    setTimeout(() => indicator.remove(), 300);
+                }, CONFIG.UI.ANIMATIONS.TURN_TRANSITION_DURATION);
+            }
+        }
+        
+
+        window.onload = () => new Game();
+    </script>
+    <script>
+        const styles = `
+    body {
+        background: ${CONFIG.UI.COLORS.BACKGROUND};
+        color: ${CONFIG.UI.COLORS.TEXT};
+    }
+
+    #gameContainer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    #gameCanvas {
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        background: linear-gradient(to bottom, #1a1a2e, #162447);
+    }
+
+    #gameInfo {
+        background: ${CONFIG.UI.COLORS.PANEL};
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .player-info {
+        background: rgba(0,0,0,0.2);
+        border-radius: 10px;
+        padding: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .player-info.active {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(255,255,255,0.1);
+    }
+
+    .player-stat {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        opacity: 0.8;
+    }
+
+    .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    #controls {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        padding: 15px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+    }
+
+    .control-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .control-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: ${CONFIG.UI.COLORS.HIGHLIGHT};
+    }
+
+    .score-popup {
+        position: absolute;
+        font-size: 24px;
+        font-weight: bold;
+        pointer-events: none;
+        animation: fadeUp 1s ease-out forwards;
+    }
+
+    @keyframes fadeUp {
+        0% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+    }
+
+    .turn-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 48px;
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .turn-indicator.visible {
+        opacity: 1;
+    }
+
+    .solution-bar {
+        width: 100%;
+        height: 10px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .solution-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+`;
+         window.addEventListener('DOMContentLoaded', () => {
+            const styleSheet = document.createElement("style");
+            styleSheet.textContent = styles;
+            document.head.appendChild(styleSheet);
+        });
+    </script>
+</body>
+</html>
