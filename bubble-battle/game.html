@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bubble Battle</title>
     <style>
         /* Your existing styles */
@@ -460,7 +459,7 @@
         };
 
         class Bubble {
-            constructor(x, y, size, angle, color, isNew = false) {
+            constructor(x, y, size, angle, color, releaseOrder = 0) {
                 this.x = x;
                 this.y = y;
                 this.size = size;
@@ -478,10 +477,8 @@
                 this.dy = -Math.cos(this.angle) * this.speed;
                 this.volume = Math.PI * this.radius * this.radius;
                 this.destroyed = false;
-                this.isNew = isNew;
+                this.releaseOrder = releaseOrder;
             }
-
-            // ... (rest of the Bubble class as before)
 
             update() {
                 this.x += this.dx;
@@ -506,7 +503,7 @@
                 return false;
             }
 
-                draw(ctx, isInvalid = false) {
+            draw(ctx, isInvalid = false) {
                 // Create circular gradient for the main bubble
                 const gradient = ctx.createRadialGradient(
                     this.x, this.y, 0,
@@ -584,10 +581,6 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 return distance < (this.radius + other.radius);
             }
-
-            hitInBottomThird(other) {
-                return this.y > other.y + other.radius * CONFIG.GAME.COLLISION.BOTTOM_THIRD_RATIO;
-            }
         }
 
         class Game {
@@ -614,6 +607,7 @@
                 this.errorMessage = '';
                 this.lastTimestamp = 0;
                 this.simulationStartTime = 0;
+                this.bubbleCounter = 0; // Added to track bubble release order
 
                 // Access the speed slider and value display elements
                 this.speedSlider = document.getElementById('speedSlider');
@@ -640,8 +634,6 @@
             updateSpeedValue() {
                 this.speedValueDisplay.textContent = this.speedSlider.value;
             }
-
-            // ... (rest of the Game class methods)
 
             setupEventListeners() {
                 this.canvas.addEventListener('mousemove', (e) => {
@@ -716,13 +708,15 @@
                     return;
                 }
 
+                const newBubbleY = CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
+
                 const newBubble = new Bubble(
                     this.mouseX,
-                    CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
+                    newBubbleY,
                     this.currentSize,
                     this.currentAngle,
                     this.currentPlayer,
-                    true
+                    ++this.bubbleCounter // Increment bubble counter for release order
                 );
 
                 if (this.bubbles.some(b => newBubble.intersects(b))) {
@@ -745,8 +739,6 @@
                     }
                 }
 
-
-
                 this.errorMessage = '';
                 this.bubbles.push(newBubble);
                 this.solution[this.currentPlayer] -= requiredSolution;
@@ -762,13 +754,22 @@
 
                         if (!b1.destroyed && !b2.destroyed && b1.intersects(b2)) {
                             if (b1.color !== b2.color) {
-                                const newBubble = b1.isNew ? b1 : b2;
-                                const existingBubble = b1.isNew ? b2 : b1;
+                                const b1Order = b1.releaseOrder || 0;
+                                const b2Order = b2.releaseOrder || 0;
+
+                                const newBubble = b1Order > b2Order ? b1 : b2;
+                                const existingBubble = b1Order <= b2Order ? b1 : b2;
+
                                 gameAudio.playSound('collision');
 
-                                if (newBubble.hitInBottomThird(existingBubble)) {
+                                const collisionY = (b1.y + b2.y) / 2;
+                                const bottomThirdY = CONFIG.CANVAS.HEIGHT * (2/3);
+
+                                if (collisionY >= bottomThirdY) {
+                                    // Collision in bottom third
                                     newBubble.destroyed = true;
                                 } else {
+                                    // Collision above bottom third
                                     b1.destroyed = true;
                                     b2.destroyed = true;
                                 }
@@ -840,7 +841,6 @@
                         this.errorMessage = CONFIG.MESSAGES.NO_SOLUTION;
                         this.updateUI();
                         this.startSimulation();
-                        // setTimeout(() => this.switchPlayer(), CONFIG.GAME.TURN_SKIP_DELAY);
                         return;
                     }
                 }
@@ -923,6 +923,16 @@
 
                 this.ctx.clearRect(0, 0, CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);
 
+                // Draw the dotted line for the bottom third
+                this.ctx.beginPath();
+                this.ctx.setLineDash([5, 5]); // Dotted line
+                const bottomThirdY = CONFIG.CANVAS.HEIGHT * (2 / 3);
+                this.ctx.moveTo(0, bottomThirdY);
+                this.ctx.lineTo(CONFIG.CANVAS.WIDTH, bottomThirdY);
+                this.ctx.strokeStyle = 'gray';
+                this.ctx.stroke();
+                this.ctx.setLineDash([]); // Reset to solid lines
+
                 if (this.gameState !== 'ended') {
                     if (this.gameState === 'placing') {
                         const maxSize = this.getMaxAllowedSize();
@@ -947,8 +957,6 @@
                                     break;
                                 }
                             }
-
-
 
                             this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
                             previewBubble.draw(this.ctx, !isPlacementValid);
@@ -1019,140 +1027,7 @@
                 }, CONFIG.UI.ANIMATIONS.TURN_TRANSITION_DURATION);
             }
         }
-        
 
-        window.onload = () => new Game();
-    </script>
-    <script>
-        const styles = `
-    body {
-        background: ${CONFIG.UI.COLORS.BACKGROUND};
-        color: ${CONFIG.UI.COLORS.TEXT};
-    }
-
-    #gameContainer {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        padding: 20px;
-    }
-
-    #gameCanvas {
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.3);
-        background: linear-gradient(to bottom, #1a1a2e, #162447);
-    }
-
-    #gameInfo {
-        background: ${CONFIG.UI.COLORS.PANEL};
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    .player-info {
-        background: rgba(0,0,0,0.2);
-        border-radius: 10px;
-        padding: 15px;
-        transition: all 0.3s ease;
-    }
-
-    .player-info.active {
-        transform: scale(1.05);
-        box-shadow: 0 0 15px rgba(255,255,255,0.1);
-    }
-
-    .player-stat {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 10px 0;
-    }
-
-    .stat-label {
-        font-size: 14px;
-        opacity: 0.8;
-    }
-
-    .stat-value {
-        font-size: 18px;
-        font-weight: bold;
-    }
-
-    #controls {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        padding: 15px;
-        background: rgba(255,255,255,0.05);
-        border-radius: 10px;
-    }
-
-    .control-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .control-value {
-        font-size: 20px;
-        font-weight: bold;
-        color: ${CONFIG.UI.COLORS.HIGHLIGHT};
-    }
-
-    .score-popup {
-        position: absolute;
-        font-size: 24px;
-        font-weight: bold;
-        pointer-events: none;
-        animation: fadeUp 1s ease-out forwards;
-    }
-
-    @keyframes fadeUp {
-        0% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        100% {
-            opacity: 0;
-            transform: translateY(-50px);
-        }
-    }
-
-    .turn-indicator {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 48px;
-        font-weight: bold;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .turn-indicator.visible {
-        opacity: 1;
-    }
-
-    .solution-bar {
-        width: 100%;
-        height: 10px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 5px;
-        overflow: hidden;
-    }
-
-    .solution-fill {
-        height: 100%;
-        transition: width 0.3s ease;
-    }
-`;
-         window.addEventListener('DOMContentLoaded', () => {
-            const styleSheet = document.createElement("style");
-            styleSheet.textContent = styles;
-            document.head.appendChild(styleSheet);
-        });
         window.onload = () => window.game = new Game();
     </script>
 </body>
