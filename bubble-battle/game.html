@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bubble Battle</title>
     <style>
+        /* Your existing styles */
         body {
             display: flex;
             flex-direction: column;
@@ -40,6 +41,122 @@
             color: red;
             font-size: 14px;
             margin-top: 5px;
+        }
+
+        /* Add these styles for the speed slider */
+        #speedSlider {
+            width: 150px;
+        }
+        .control-item label {
+            margin-right: 10px;
+        }
+
+        /* Additional styles for UI enhancement */
+        body {
+            background: #1a1a2e;
+            color: #e6e6e6;
+        }
+
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        #gameCanvas {
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, #1a1a2e, #162447);
+        }
+
+        #gameInfo {
+            background: #162447;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .player-info {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .player-info.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+
+        .player-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+            grid-column: span 2;
+            text-align: center;
+        }
+
+        /* Styles for solution bars */
+        .solution-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .solution-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .solution-fill.red {
+            background: linear-gradient(to right, #ff6b6b, #ff0000);
+        }
+
+        .solution-fill.blue {
+            background: linear-gradient(to right, #6b96ff, #0000ff);
         }
     </style>
 </head>
@@ -81,6 +198,14 @@
                     <span class="stat-label">Time Left:</span>
                     <span id="timeLeft" class="control-value">5s</span>
                 </div>
+
+                <!-- Speed Slider Control -->
+                <div class="control-item">
+                    <label for="speedSlider" class="stat-label">Speed:</label>
+                    <input type="range" id="speedSlider" min="1" max="20" value="5">
+                    <span id="speedValue" class="control-value">5</span>
+                </div>
+
                 <p id="errorMessage" class="error-message"></p>
             </div>
 
@@ -101,6 +226,7 @@
         </div>
     </div>
 
+    <!-- Audio Manager Script -->
     <script>
         // Audio Context and Sound Effects Manager
         class GameAudioManager {
@@ -266,12 +392,11 @@
         }
 
         // Export the audio manager
-const gameAudio = new GameAudioManager();
+        const gameAudio = new GameAudioManager();
     </script>
 
+    <!-- Main Game Script -->
     <script>
-        // import { gameAudio } from './gameAudio.js';
-
         // Game Configuration Constants
         const CONFIG = {
             CANVAS: {
@@ -281,14 +406,13 @@ const gameAudio = new GameAudioManager();
             BUBBLE: {
                 MIN_SIZE: 1,
                 MAX_SIZE: 8,
-                BASE_SPEED: 5,
                 RADIUS_MULTIPLIER: 5,
                 OPACITY: 0.6,
-                SHINE_OFFSET: 0.35,    // Controls the position of the shine effect
-                SHINE_RADIUS: 0.5,     // Controls the size of the shine effect
-                BORDER_WIDTH: 2,       // Width of bubble border
-                INNER_OPACITY: 0.6,    // Main bubble opacity
-                SHINE_OPACITY: 0.4     // Shine effect opacity
+                SHINE_OFFSET: 0.35,
+                SHINE_RADIUS: 0.5,
+                BORDER_WIDTH: 2,
+                INNER_OPACITY: 0.6,
+                SHINE_OPACITY: 0.4
             },
             ANGLE: {
                 MIN: -85,
@@ -298,7 +422,7 @@ const gameAudio = new GameAudioManager();
             },
             GAME: {
                 INITIAL_SOLUTION: 200,
-                SIMULATION_TIME: 2000,
+                SIMULATION_TIME: 200,
                 TURN_SKIP_DELAY: 1000,
                 COLLISION: {
                     BOTTOM_THIRD_RATIO: 0.66
@@ -316,7 +440,8 @@ const gameAudio = new GameAudioManager();
                 NO_SOLUTION: 'Not enough solution - skipping turn',
                 OVERLAP: 'Cannot place bubble here - overlapping with existing bubble',
                 SIZE_TOO_LARGE: 'Not enough solution for larger bubble',
-                SOLUTION_INSUFFICIENT: 'Not enough solution for this bubble size'
+                SOLUTION_INSUFFICIENT: 'Not enough solution for this bubble size',
+                PLACEMENT_INVALID: 'Cannot place bubble directly underneath an existing bubble'
             },
             UI: {
                 COLORS: {
@@ -342,13 +467,21 @@ const gameAudio = new GameAudioManager();
                 this.radius = size * CONFIG.BUBBLE.RADIUS_MULTIPLIER;
                 this.angle = angle * Math.PI / 180;
                 this.color = color;
-                this.speed = (8 + (9 - size)) / 5;
+
+                // Get the denominator value from the slider
+                const speedDenominator = game.getSpeedDenominator();
+
+                // Update the speed formula to use the denominator from the slider
+                this.speed = (8 + (9 - size)) / speedDenominator;
+
                 this.dx = Math.sin(this.angle) * this.speed;
                 this.dy = -Math.cos(this.angle) * this.speed;
                 this.volume = Math.PI * this.radius * this.radius;
                 this.destroyed = false;
                 this.isNew = isNew;
             }
+
+            // ... (rest of the Bubble class as before)
 
             update() {
                 this.x += this.dx;
@@ -373,18 +506,24 @@ const gameAudio = new GameAudioManager();
                 return false;
             }
 
-                draw(ctx) {
+                draw(ctx, isInvalid = false) {
                 // Create circular gradient for the main bubble
                 const gradient = ctx.createRadialGradient(
                     this.x, this.y, 0,
                     this.x, this.y, this.radius
                 );
                 
-                // Create shiny bubble effect
-                gradient.addColorStop(0, this.color);
-                gradient.addColorStop(0.8, this.color);
-                gradient.addColorStop(1, this.adjustColor(this.color, -30));  // Darker edge
-
+                if (isInvalid) {
+                    // Use gray color for invalid placement
+                    gradient.addColorStop(0, 'gray');
+                    gradient.addColorStop(0.8, 'gray');
+                    gradient.addColorStop(1, this.adjustColor('gray', -30)); // Darker edge
+                } else {
+                    // Existing gradient creation using this.color
+                    gradient.addColorStop(0, this.color);
+                    gradient.addColorStop(0.8, this.color);
+                    gradient.addColorStop(1, this.adjustColor(this.color, -30)); // Darker edge
+                }
                 // Draw main bubble
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -476,9 +615,33 @@ const gameAudio = new GameAudioManager();
                 this.lastTimestamp = 0;
                 this.simulationStartTime = 0;
 
+                // Access the speed slider and value display elements
+                this.speedSlider = document.getElementById('speedSlider');
+                this.speedValueDisplay = document.getElementById('speedValue');
+
+                // Set up an event listener for the slider
+                this.speedSlider.addEventListener('input', () => {
+                    this.updateSpeedValue();
+                });
+
+                // Initialize the displayed speed value
+                this.updateSpeedValue();
+
                 this.setupEventListeners();
                 requestAnimationFrame(this.gameLoop.bind(this));
             }
+
+            // Method to get the current speed denominator from the slider
+            getSpeedDenominator() {
+                return parseFloat(this.speedSlider.value);
+            }
+
+            // Method to update the displayed speed value
+            updateSpeedValue() {
+                this.speedValueDisplay.textContent = this.speedSlider.value;
+            }
+
+            // ... (rest of the Game class methods)
 
             setupEventListeners() {
                 this.canvas.addEventListener('mousemove', (e) => {
@@ -567,6 +730,22 @@ const gameAudio = new GameAudioManager();
                     this.updateUI();
                     return;
                 }
+
+                for (const bubble of this.bubbles) {
+                    const dx = Math.abs(newBubble.x - bubble.x);
+                    const dy = bubble.y - newBubble.y; // Negative if bubble is above newBubble
+                    const horizontalOverlap = dx < (bubble.radius + newBubble.radius);
+                    const verticalOverlap = dy < 0; // True if bubble is above newBubble
+
+                    if (horizontalOverlap && verticalOverlap) {
+                        // Invalid placement
+                        this.errorMessage = CONFIG.MESSAGES.PLACEMENT_INVALID;
+                        this.updateUI();
+                        return;
+                    }
+                }
+
+
 
                 this.errorMessage = '';
                 this.bubbles.push(newBubble);
@@ -755,8 +934,24 @@ const gameAudio = new GameAudioManager();
                                 this.currentAngle,
                                 this.currentPlayer
                             );
+
+                            let isPlacementValid = true;
+                            for (const bubble of this.bubbles) {
+                                const dx = Math.abs(previewBubble.x - bubble.x);
+                                const dy = bubble.y - previewBubble.y; // Negative if bubble is above previewBubble
+                                const horizontalOverlap = dx < (bubble.radius + previewBubble.radius);
+                                const verticalOverlap = dy < 0; // True if bubble is above previewBubble
+                            
+                                if (horizontalOverlap && verticalOverlap) {
+                                    isPlacementValid = false;
+                                    break;
+                                }
+                            }
+
+
+
                             this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
-                            previewBubble.draw(this.ctx);
+                            previewBubble.draw(this.ctx, !isPlacementValid);
                             this.ctx.globalAlpha = 1;
 
                             const endPoint = this.calculateTrajectoryEnd(
@@ -958,6 +1153,7 @@ const gameAudio = new GameAudioManager();
             styleSheet.textContent = styles;
             document.head.appendChild(styleSheet);
         });
+        window.onload = () => window.game = new Game();
     </script>
 </body>
 </html>
