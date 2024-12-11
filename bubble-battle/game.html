@@ -414,10 +414,17 @@
                 SHINE_OPACITY: 0.4
             },
             ANGLE: {
-                MIN: -85,
-                MAX: 85,
-                STEP: 5,
-                DEFAULT: 0
+                RED: {
+                    MIN: -90,
+                    MAX: -10,
+                    DEFAULT: -10
+                },
+                BLUE: {
+                    MIN: -90,
+                    MAX: -10,
+                    DEFAULT: -10
+                },
+                STEP: 5
             },
             GAME: {
                 INITIAL_SOLUTION: 200,
@@ -473,8 +480,13 @@
                 // Update the speed formula to use the denominator from the slider
                 this.speed = (8 + (9 - size)) / speedDenominator;
 
-                this.dx = Math.sin(this.angle) * this.speed;
-                this.dy = -Math.cos(this.angle) * this.speed;
+                if (color === CONFIG.PLAYERS.BLUE) {
+                    this.dx = -Math.cos(this.angle) * this.speed;
+                    this.dy = -Math.sin(this.angle) * this.speed;
+                } else {
+                    this.dx = Math.cos(this.angle) * this.speed;
+                    this.dy = -Math.sin(this.angle) * this.speed;
+                }
                 this.volume = Math.PI * this.radius * this.radius;
                 this.destroyed = false;
                 this.releaseOrder = releaseOrder;
@@ -594,7 +606,7 @@
                 this.timeLeft = CONFIG.GAME.SIMULATION_TIME / 1000;
                 this.currentSize = CONFIG.BUBBLE.MIN_SIZE;
                 this.lastUsedSize = CONFIG.BUBBLE.MIN_SIZE;
-                this.currentAngle = CONFIG.ANGLE.DEFAULT;
+                this.currentAngle = CONFIG.ANGLE.RED.DEFAULT;
                 this.scores = { 
                     [CONFIG.PLAYERS.RED]: 0, 
                     [CONFIG.PLAYERS.BLUE]: 0 
@@ -603,7 +615,7 @@
                     [CONFIG.PLAYERS.RED]: CONFIG.GAME.INITIAL_SOLUTION, 
                     [CONFIG.PLAYERS.BLUE]: CONFIG.GAME.INITIAL_SOLUTION
                 };
-                this.mouseX = CONFIG.CANVAS.WIDTH / 2;
+                this.mouseY = CONFIG.CANVAS.HEIGHT / 2;
                 this.errorMessage = '';
                 this.lastTimestamp = 0;
                 this.simulationStartTime = 0;
@@ -639,10 +651,10 @@
                 this.canvas.addEventListener('mousemove', (e) => {
                     if (this.gameState === 'placing') {
                         const rect = this.canvas.getBoundingClientRect();
-                        this.mouseX = e.clientX - rect.left;
-                        this.mouseX = Math.max(
+                        this.mouseY = e.clientY - rect.top;
+                        this.mouseY = Math.max(
                             this.currentSize * CONFIG.BUBBLE.RADIUS_MULTIPLIER, 
-                            Math.min(CONFIG.CANVAS.WIDTH - this.currentSize * CONFIG.BUBBLE.RADIUS_MULTIPLIER, this.mouseX)
+                            Math.min(CONFIG.CANVAS.HEIGHT - this.currentSize * CONFIG.BUBBLE.RADIUS_MULTIPLIER, this.mouseY)
                         );
                     }
                 });
@@ -664,14 +676,20 @@
                             this.currentSize = Math.max(CONFIG.BUBBLE.MIN_SIZE, this.currentSize - 1);
                             this.errorMessage = '';
                             break;
-                        case '1':
-                            this.currentAngle = (this.currentAngle - CONFIG.ANGLE.STEP) % 360;
-                            if (this.currentAngle < CONFIG.ANGLE.MIN) this.currentAngle += 360;
-                            break;
-                        case '2':
-                            this.currentAngle = (this.currentAngle + CONFIG.ANGLE.STEP) % 360;
-                            if (this.currentAngle > CONFIG.ANGLE.MAX) this.currentAngle -= 360;
-                            break;
+                            case '1':
+                                if (this.currentPlayer === CONFIG.PLAYERS.BLUE) {
+                                    this.currentAngle = Math.max(CONFIG.ANGLE.BLUE.MIN, this.currentAngle - CONFIG.ANGLE.STEP);
+                                } else {
+                                    this.currentAngle = Math.max(CONFIG.ANGLE.RED.MIN, this.currentAngle - CONFIG.ANGLE.STEP);
+                                }
+                                break;
+                            case '2':
+                                if (this.currentPlayer === CONFIG.PLAYERS.BLUE) {
+                                    this.currentAngle = Math.min(CONFIG.ANGLE.BLUE.MAX, this.currentAngle + CONFIG.ANGLE.STEP);
+                                } else {
+                                    this.currentAngle = Math.min(CONFIG.ANGLE.RED.MAX, this.currentAngle + CONFIG.ANGLE.STEP);
+                                }
+                                break;
                         case ' ':
                             this.placeBubble();
                             break;
@@ -703,46 +721,34 @@
             placeBubble() {
                 const requiredSolution = this.currentSize * this.currentSize;
                 if (this.solution[this.currentPlayer] < requiredSolution) {
-                    this.errorMessage = CONFIG.MESSAGES.SOLUTION_INSUFFICIENT;
+                    this.errorMessage = 'Not enough solution for this bubble size';
                     this.updateUI();
                     return;
                 }
-
-                const newBubbleY = CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
-
+            
+                // Set x position based on player
+                const startX = this.currentPlayer === CONFIG.PLAYERS.BLUE ? 
+                    CONFIG.CANVAS.WIDTH - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize :
+                    CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
+            
                 const newBubble = new Bubble(
-                    this.mouseX,
-                    newBubbleY,
+                    startX,
+                    this.mouseY,
                     this.currentSize,
                     this.currentAngle,
                     this.currentPlayer,
-                    ++this.bubbleCounter // Increment bubble counter for release order
+                    ++this.bubbleCounter
                 );
-
+            
                 if (this.bubbles.some(b => newBubble.intersects(b))) {
-                    this.errorMessage = CONFIG.MESSAGES.OVERLAP;
+                    this.errorMessage = 'Cannot place bubble here - overlapping with existing bubble';
                     this.updateUI();
                     return;
                 }
-
-                for (const bubble of this.bubbles) {
-                    const dx = Math.abs(newBubble.x - bubble.x);
-                    const dy = bubble.y - newBubble.y; // Negative if bubble is above newBubble
-                    const horizontalOverlap = dx < (bubble.radius + newBubble.radius);
-                    const verticalOverlap = dy < 0; // True if bubble is above newBubble
-
-                    if (horizontalOverlap && verticalOverlap) {
-                        // Invalid placement
-                        this.errorMessage = CONFIG.MESSAGES.PLACEMENT_INVALID;
-                        this.updateUI();
-                        return;
-                    }
-                }
-
+            
                 this.errorMessage = '';
                 this.bubbles.push(newBubble);
                 this.solution[this.currentPlayer] -= requiredSolution;
-                gameAudio.playSound('launch');
                 this.startSimulation();
             }
 
@@ -791,12 +797,19 @@
 
             calculateTrajectoryEnd(x, y, angle) {
                 const radians = angle * Math.PI / 180;
-                const dx = Math.sin(radians);
-                const dy = -Math.cos(radians);
-                
+                let dx, dy;
+
+                if (this.currentPlayer === CONFIG.PLAYERS.BLUE) {
+                    dx = -Math.cos(radians);
+                    dy = -Math.sin(radians);
+                } else {
+                    dx = Math.cos(radians);
+                    dy = -Math.sin(radians);
+                }
+
                 let tX = Infinity;
                 let tY = Infinity;
-                
+
                 if (dx !== 0) {
                     const tLeft = -x / dx;
                     const tRight = (CONFIG.CANVAS.WIDTH - x) / dx;
@@ -805,7 +818,7 @@
                         tRight > 0 ? tRight : Infinity
                     );
                 }
-                
+
                 if (dy !== 0) {
                     const tTop = -y / dy;
                     const tBottom = (CONFIG.CANVAS.HEIGHT - y) / dy;
@@ -814,7 +827,7 @@
                         tBottom > 0 ? tBottom : Infinity
                     );
                 }
-                
+
                 const t = Math.min(tX, tY);
                 return {
                     x: x + dx * t,
@@ -831,6 +844,9 @@
             switchPlayer() {
                 this.lastUsedSize = this.currentSize;
                 this.currentPlayer = this.currentPlayer === CONFIG.PLAYERS.RED ? CONFIG.PLAYERS.BLUE : CONFIG.PLAYERS.RED;
+                this.currentAngle = this.currentPlayer === CONFIG.PLAYERS.RED ? 
+                    CONFIG.ANGLE.RED.DEFAULT : 
+                    CONFIG.ANGLE.BLUE.DEFAULT;
                 this.gameState = 'placing';
                 this.errorMessage = '';
 
@@ -937,38 +953,34 @@
                     if (this.gameState === 'placing') {
                         const maxSize = this.getMaxAllowedSize();
                         if (this.currentSize <= maxSize) {
+                            const startX = this.currentPlayer === CONFIG.PLAYERS.BLUE ? 
+                                CONFIG.CANVAS.WIDTH - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize :
+                                CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
+                        
                             const previewBubble = new Bubble(
-                                this.mouseX,
-                                CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
+                                startX,
+                                this.mouseY,
                                 this.currentSize,
                                 this.currentAngle,
                                 this.currentPlayer
                             );
-
+                        
                             let isPlacementValid = true;
                             for (const bubble of this.bubbles) {
-                                const dx = Math.abs(previewBubble.x - bubble.x);
-                                const dy = bubble.y - previewBubble.y; // Negative if bubble is above previewBubble
-                                const horizontalOverlap = dx < (bubble.radius + previewBubble.radius);
-                                const verticalOverlap = dy < 0; // True if bubble is above previewBubble
-                            
-                                if (horizontalOverlap && verticalOverlap) {
+                                if (previewBubble.intersects(bubble)) {
                                     isPlacementValid = false;
                                     break;
                                 }
                             }
-
+                        
                             this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
                             previewBubble.draw(this.ctx, !isPlacementValid);
                             this.ctx.globalAlpha = 1;
-
-                            const endPoint = this.calculateTrajectoryEnd(
-                                this.mouseX,
-                                CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize,
-                                this.currentAngle
-                            );
+                        
+                            // Draw trajectory
+                            const endPoint = this.calculateTrajectoryEnd(startX, this.mouseY, this.currentAngle);
                             this.ctx.beginPath();
-                            this.ctx.moveTo(this.mouseX, CONFIG.CANVAS.HEIGHT - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize);
+                            this.ctx.moveTo(startX, this.mouseY);
                             this.ctx.lineTo(endPoint.x, endPoint.y);
                             this.ctx.strokeStyle = this.currentPlayer;
                             this.ctx.stroke();
