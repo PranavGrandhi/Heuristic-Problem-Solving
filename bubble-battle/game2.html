@@ -971,9 +971,9 @@
             gameLoop(timestamp) {
                 const deltaTime = timestamp - this.lastTimestamp;
                 this.lastTimestamp = timestamp;
-
+                        
                 this.ctx.clearRect(0, 0, CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);
-
+                        
                 // Draw the dotted line for the bottom third
                 this.ctx.beginPath();
                 this.ctx.setLineDash([5, 5]); // Dotted line
@@ -983,65 +983,86 @@
                 this.ctx.strokeStyle = 'gray';
                 this.ctx.stroke();
                 this.ctx.setLineDash([]); // Reset to solid lines
-
-                if (this.gameState !== 'ended') {
-                    if (this.isPlacementPhase) {
-                        // Draw all placed bubbles
-                        Object.values(this.placedBubbles).forEach(playerBubbles => {
-                        playerBubbles.forEach(bubble => bubble.draw(this.ctx));
-                        });
-
-                        // Draw preview bubble for current player
-                        const maxSize = this.getMaxAllowedSize();
-                        if (this.currentSize <= maxSize) {
-                            const startX = this.currentPlayer === CONFIG.PLAYERS.BLUE ? 
-                                CONFIG.CANVAS.WIDTH - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize :
-                                CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
                         
-                            const previewBubble = new Bubble(
-                                startX,
-                                this.mouseY,
-                                this.currentSize,
-                                this.currentAngle,
-                                this.currentPlayer
-                            );
-                        
-                            let isPlacementValid = true;
-                            for (const bubble of this.bubbles) {
-                                if (previewBubble.intersects(bubble)) {
-                                    isPlacementValid = false;
-                                    break;
-                                }
-                            }
-                        
-                            this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
-                            previewBubble.draw(this.ctx, !isPlacementValid);
-                            this.ctx.globalAlpha = 1;
-                        
-                            // Draw trajectory
-                            const endPoint = this.calculateTrajectoryEnd(startX, this.mouseY, this.currentAngle);
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(startX, this.mouseY);
-                            this.ctx.lineTo(endPoint.x, endPoint.y);
-                            this.ctx.strokeStyle = this.currentPlayer;
-                            this.ctx.stroke();
-                        }
+                if (this.gameState === 'ended') {
+                    // Draw game over screen
+                    this.ctx.fillStyle = 'black';
+                    this.ctx.font = CONFIG.FONTS.GAME_OVER;
+                    const redScore = Math.round(this.scores[CONFIG.PLAYERS.RED]);
+                    const blueScore = Math.round(this.scores[CONFIG.PLAYERS.BLUE]);
+                    const winner = redScore > blueScore ? CONFIG.PLAYERS.RED : 
+                                  redScore < blueScore ? CONFIG.PLAYERS.BLUE : 'Tie';
+                
+                    if (winner === 'Tie') {
+                        this.ctx.fillText(`Game Over - Tie!`, CONFIG.CANVAS.WIDTH/4, CONFIG.CANVAS.HEIGHT/2);
                     } else {
-                        if (this.gameState === 'simulating') {
-                            const elapsed = timestamp - this.simulationStartTime;
-                            this.timeLeft = (CONFIG.GAME.SIMULATION_TIME - elapsed) / 1000;
-
-                            this.handleCollisions();
-                            this.updateUI();
-
-                            if (this.bubbles.length === 0) {
-                                this.endGame();
+                        const winnerText = winner.charAt(0).toUpperCase() + winner.slice(1);
+                        this.ctx.fillText(`Game Over - ${winnerText} Wins!`, CONFIG.CANVAS.WIDTH/6, CONFIG.CANVAS.HEIGHT/2);
+                    }
+                
+                    this.ctx.font = CONFIG.FONTS.SCORE;
+                    this.ctx.fillText(
+                        `Final Scores: Red ${redScore} - Blue ${blueScore}`,
+                        CONFIG.CANVAS.WIDTH/3.2,
+                        CONFIG.CANVAS.HEIGHT/2 + 50
+                    );
+                } else if (this.isPlacementPhase) {
+                    // Draw all placed bubbles
+                    Object.values(this.placedBubbles).forEach(playerBubbles => {
+                        playerBubbles.forEach(bubble => bubble.draw(this.ctx));
+                    });
+                
+                    // Draw preview bubble for current player
+                    const maxSize = this.getMaxAllowedSize();
+                    if (this.currentSize <= maxSize) {
+                        const startX = this.currentPlayer === CONFIG.PLAYERS.BLUE ? 
+                            CONFIG.CANVAS.WIDTH - CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize :
+                            CONFIG.BUBBLE.RADIUS_MULTIPLIER * this.currentSize;
+                    
+                        const previewBubble = new Bubble(
+                            startX,
+                            this.mouseY,
+                            this.currentSize,
+                            this.currentAngle,
+                            this.currentPlayer
+                        );
+                    
+                        let isPlacementValid = true;
+                        for (const bubble of this.placedBubbles[this.currentPlayer]) {
+                            if (previewBubble.intersects(bubble)) {
+                                isPlacementValid = false;
+                                break;
                             }
                         }
-                        this.bubbles.forEach(bubble => bubble.draw(this.ctx));
+                    
+                        this.ctx.globalAlpha = CONFIG.BUBBLE.OPACITY;
+                        previewBubble.draw(this.ctx, !isPlacementValid);
+                        this.ctx.globalAlpha = 1;
+                    
+                        // Draw trajectory
+                        const endPoint = this.calculateTrajectoryEnd(startX, this.mouseY, this.currentAngle);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(startX, this.mouseY);
+                        this.ctx.lineTo(endPoint.x, endPoint.y);
+                        this.ctx.strokeStyle = this.currentPlayer;
+                        this.ctx.stroke();
                     }
+                } else {
+                    // Simulation phase
+                    if (this.gameState === 'simulating') {
+                        const elapsed = timestamp - this.simulationStartTime;
+                        this.timeLeft = (CONFIG.GAME.SIMULATION_TIME - elapsed) / 1000;
+                    
+                        this.handleCollisions();
+                        this.updateUI();
+                    
+                        if (this.bubbles.length === 0) {
+                            this.endGame();
+                        }
+                    }
+                    this.bubbles.forEach(bubble => bubble.draw(this.ctx));
                 }
-
+            
                 requestAnimationFrame(this.gameLoop.bind(this));
             }
 
